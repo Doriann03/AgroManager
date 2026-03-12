@@ -8,6 +8,6 @@ import java.util.List;
 @Repository
 public interface ParcelRepository extends JpaRepository<Parcel, Long> {
     // Spring va genera automat metode precum save(), findAll(), findById()
-    // Putem adăuga și metode personalizate:
-    List<Parcel> findByOwnerId(Long userId);
+    // Caută parcelele bazându-se pe proprietatea 'username' a obiectului 'owner'
+    List<Parcel> findAllByOwnerUsername(String username);
 }

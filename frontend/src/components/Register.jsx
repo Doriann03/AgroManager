@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/axiosConfig';
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
@@ -26,7 +26,7 @@ const Register = () => {
         setMessage('');
 
         try {
-            await axios.post('http://localhost:8080/api/auth/register', formData);
+            await apiClient.post('/api/auth/register', formData);
             setMessage('Cont creat cu succes! Vei fi redirecționat către login...');
             
             setTimeout(() => {
