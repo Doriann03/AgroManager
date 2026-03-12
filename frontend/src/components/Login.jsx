@@ -53,6 +53,11 @@ const Login = () => {
                 </div>
                 {error && <p style={{ color: 'red' }}>{error}</p>}
                 <button type="submit" style={{ width: '100%', padding: '10px' }}>Logare</button>
+                
+                <div style={{ marginTop: '15px', textAlign: 'center', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
+                    <p>Nu ai cont?</p>
+                    <button type="button" onClick={() => navigate('/register')} style={{ width: '100%', padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', cursor: 'pointer' }}>Înregistrează-te ca Fermier</button>
+                </div>
             </form>
         </div>
     );
