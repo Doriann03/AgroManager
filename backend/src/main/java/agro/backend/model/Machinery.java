@@ -1,19 +1,33 @@
 package agro.backend.model;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "machinery")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
 public class Machinery {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String brandModel;
-    private String licensePlate;
-    private Integer workHours;
+    @Column(nullable = false)
+    private String name; // Ex: "Tractor John Deere"
 
-    @Enumerated(EnumType.STRING)
-    private MachineryStatus status; // Creează un Enum separat (ACTIVE, REPAIR)
+    private String type; // Ex: "Tractor", "Combină"
+
+    private String model; // Ex: "8R 410"
+
+    private LocalDate purchaseDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User owner;
 }
