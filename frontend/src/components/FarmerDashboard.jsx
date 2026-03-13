@@ -52,7 +52,7 @@ const FarmerDashboard = () => {
                 </button>
             </div>
 
-            <div style={{ marginTop: '30px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', gap: '20px', marginTop: '30px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
                 <h2>Panou de control</h2>
                 <p>De aici poți gestiona resursele fermei tale.</p>
                 <button 
@@ -68,6 +68,20 @@ const FarmerDashboard = () => {
                     }}
                 >
                     &#x1F5FA; Gestionează Harta Parcelelor
+                </button>
+                <button 
+                    onClick={() => navigate('/machinery')}
+                    style={{ 
+                        backgroundColor: '#FFC107', 
+                        color: 'black', 
+                        padding: '15px 30px', 
+                        border: 'none', 
+                        borderRadius: '5px', 
+                        fontSize: '16px', 
+                        cursor: 'pointer' 
+                    }}
+                >
+                    &#x1F69C; Gestionează Utilaje
                 </button>
             </div>
 
