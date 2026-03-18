@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Polygon, Tooltip, LayersControl, FeatureGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, Tooltip, LayersControl } from 'react-leaflet';
+import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/axiosConfig';
 import { useMap } from 'react-leaflet/hooks';
 import '@geoman-io/leaflet-geoman-free';
 import * as turf from '@turf/turf';
-import 'leaflet/dist/leaflet.css'; // Asigură-te că CSS-ul Leaflet este încărcat
+import 'leaflet/dist/leaflet.css';
 
 // Componentă pentru controlul Geoman
-const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, mapRef }) => {
+const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, mapRef, selectedParcel, setSelectedParcel }) => {
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -23,14 +24,13 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
                 cutPolygon: false,
                 editMode: true,
                 dragMode: true,
-                removalMode: true, // Adăugat pentru a putea șterge desene greșite
+                removalMode: true,
             });
 
             const handleCreate = (e) => {
                 if (e.shape === 'Polygon') {
                     const layer = e.layer;
                     
-                    // Ștergem straturile temporare anterioare pentru a păstra doar unul
                     map.eachLayer(l => {
                         if (l.options && l.options.temp) map.removeLayer(l);
                     });
@@ -44,6 +44,7 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
                     setCalculatedArea(areaInHectares);
                     setShowSaveForm(true);
 
+                    // Pentru desene noi
                     layer.on('pm:edit', (editEvent) => {
                         const editedGeoJson = editEvent.layer.toGeoJSON();
                         const newAreaInHectares = turf.area(editedGeoJson) / 10000;
@@ -54,20 +55,53 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
 
             map.on('pm:create', handleCreate);
 
+            // Handler pentru editarea parcelelor DEJA EXISTENTE (pe hartă)
+            const handleGlobalEdit = (e) => {
+                if (selectedParcel && e.layer) {
+                    // Când o formă e modificată pe hartă
+                    const editedLayer = e.layer;
+                    const editedGeoJson = editedLayer.toGeoJSON();
+                    
+                    // Recalculează aria
+                    const newAreaInHectares = turf.area(editedGeoJson) / 10000;
+                    
+                    // Extrage noile coordonate
+                    const newCoordinates = editedLayer.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
+                    
+                    // Actualizează state-ul selectedParcel (pentru ca butonul Salvare din sidebar sa ia noile date)
+                    setSelectedParcel(prev => {
+                        if (prev) {
+                            return {
+                                ...prev,
+                                areaHectares: newAreaInHectares,
+                                coordinatesJson: JSON.stringify(newCoordinates)
+                            };
+                        }
+                        return prev;
+                    });
+                }
+            };
+            
+            map.on('pm:globaledit', handleGlobalEdit);
+
             return () => {
                 if (map.pm) {
                     map.pm.removeControls();
                     map.off('pm:create', handleCreate);
+                    map.off('pm:globaledit', handleGlobalEdit);
                 }
             };
         }
-    }, [mapRef, setDrawnLayer, setCalculatedArea, setShowSaveForm]);
+    }, [mapRef, setDrawnLayer, setCalculatedArea, setShowSaveForm, selectedParcel, setSelectedParcel]);
 
     return null;
 };
 
 const MapPage = () => {
     const [parcels, setParcels] = useState([]);
+    const [machineryList, setMachineryList] = useState([]); // State pentru utilajele utilizatorului
+    
+    // State pentru Tarla Noua
     const [showSaveForm, setShowSaveForm] = useState(false);
     const [newParcelName, setNewParcelName] = useState('');
     const [newParcelCrop, setNewParcelCrop] = useState('Grâu');
@@ -75,11 +109,18 @@ const MapPage = () => {
     const [drawnLayer, setDrawnLayer] = useState(null);
     const [error, setError] = useState('');
     
-    // State pentru Sidebar (Inspecție Virtuală)
+    // State pentru Sidebar (Inspecție Virtuală / Editare)
     const [selectedParcel, setSelectedParcel] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     
-    // Ref pentru hartă pentru a-l pasa la Geoman
+    // State pentru Activități Locale (Simulare în memorie până va exista tabelul Activities)
+    // Va avea forma: { parcelId: [{ title, date, machineryId }] }
+    const [localActivities, setLocalActivities] = useState({});
+    const [showActivityForm, setShowActivityForm] = useState(false);
+    const [newActivityTitle, setNewActivityTitle] = useState('');
+    const [newActivityMachinery, setNewActivityMachinery] = useState('');
+
+    const navigate = useNavigate();
     const mapRef = useRef(null);
 
     const fetchParcels = useCallback(async () => {
@@ -92,11 +133,24 @@ const MapPage = () => {
         }
     }, []);
 
+    const fetchMachinery = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/api/machinery');
+            setMachineryList(response.data);
+            if(response.data.length > 0) {
+                 setNewActivityMachinery(response.data[0].id); // Setează implicit primul utilaj
+            }
+        } catch (err) {
+            console.error("Eroare la preluarea utilajelor:", err);
+        }
+    }, []);
+
     useEffect(() => {
         fetchParcels();
-    }, [fetchParcels]);
+        fetchMachinery();
+    }, [fetchParcels, fetchMachinery]);
 
-    const handleSave = async () => {
+    const handleSaveNewParcel = async () => {
         if (!newParcelName || !drawnLayer) {
             setError("Numele tarlalei și un poligon desenat sunt obligatorii.");
             return;
@@ -114,7 +168,7 @@ const MapPage = () => {
 
         try {
             await apiClient.post('/api/parcels', parcelData);
-            handleCancel();
+            handleCancelNewParcel();
             await fetchParcels();
         } catch (err) {
             console.error("Eroare la salvarea parcelei:", err);
@@ -122,7 +176,7 @@ const MapPage = () => {
         }
     };
 
-    const handleCancel = () => {
+    const handleCancelNewParcel = () => {
         setShowSaveForm(false);
         setNewParcelName('');
         setNewParcelCrop('Grâu');
@@ -137,33 +191,62 @@ const MapPage = () => {
     const handleParcelClick = (parcel) => {
         setSelectedParcel(parcel);
         setIsSidebarOpen(true);
+        setShowActivityForm(false);
     };
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
         setSelectedParcel(null);
+        setShowActivityForm(false);
     };
 
-    // Funcție provizorie pentru salvarea modificărilor din sidebar
+    // Funcția REALĂ pentru salvarea modificărilor din sidebar către Baza de Date
     const handleUpdateParcel = async () => {
+        if (!selectedParcel) return;
         try {
-            // Aici ar trebui un apel PUT/PATCH către backend: apiClient.put(`/api/parcels/${selectedParcel.id}`, selectedParcel)
-            // Momentan doar simulăm și închidem
-            alert(`S-au salvat modificările pentru ${selectedParcel.name} (Simulare)`);
-            fetchParcels(); // Reîncărcăm pentru a vedea eventualele schimbări (dacă ar fi fost salvate pe server)
+            await apiClient.put(`/api/parcels/${selectedParcel.id}`, selectedParcel);
+            alert(`S-au salvat cu succes modificările pentru ${selectedParcel.name}!`);
+            await fetchParcels(); // Reîncărcăm harta pentru a asigura sincronizarea
         } catch (err) {
             console.error("Eroare la actualizare:", err);
+            alert("A apărut o eroare la salvare. Modificările nu au fost aplicate.");
         }
+    };
+
+    // Funcție pentru adăugarea unei activități în lista locală
+    const handleAddActivity = () => {
+        if (!newActivityTitle || !selectedParcel) return;
+        
+        const activity = {
+            title: newActivityTitle,
+            date: new Date().toLocaleDateString('ro-RO'),
+            machineryId: newActivityMachinery
+        };
+
+        setLocalActivities(prev => {
+            const currentList = prev[selectedParcel.id] || [];
+            return {
+                ...prev,
+                [selectedParcel.id]: [...currentList, activity]
+            };
+        });
+
+        setNewActivityTitle('');
+        setShowActivityForm(false);
+    };
+
+    const getMachineryName = (id) => {
+        const mach = machineryList.find(m => m.id.toString() === id.toString());
+        return mach ? `${mach.brandModel} (${mach.licensePlate})` : 'Utilaj necunoscut';
     };
 
     const cropOptions = ['Grâu', 'Porumb', 'Rapiță', 'Floarea Soarelui', 'Orz', 'Soia', 'Altele'];
 
-    // Stiluri pentru Sidebar
     const sidebarStyle = {
         position: 'absolute',
         top: '0',
-        right: isSidebarOpen ? '0' : '-400px',
-        width: '350px',
+        right: isSidebarOpen ? '0' : '-450px',
+        width: '400px',
         height: '100%',
         backgroundColor: 'var(--white-color)',
         boxShadow: '-2px 0 10px rgba(0,0,0,0.1)',
@@ -179,40 +262,34 @@ const MapPage = () => {
     return (
         <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
             
+            {/* Buton Înapoi */}
+            <button 
+                onClick={() => navigate('/farmer')} 
+                className="btn-secondary"
+                style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1002, padding: '8px 15px', display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+                &#8592; Înapoi la Dashboard
+            </button>
+
             <MapContainer 
                 center={[45.9432, 24.9668]} 
                 zoom={7} 
                 style={{ height: '100%', width: '100%', zIndex: 1 }}
                 ref={mapRef}
             >
-                {/* 1. Straturi Satelitare și Rutiere folosing LayersControl */}
                 <LayersControl position="topright">
-                    
-                    {/* Stratul Satelitar (Google Maps Hybrid ca exemplu gratuit, sau Esri) */}
                     <LayersControl.BaseLayer checked name="Satelit (Esri)">
                         <TileLayer
                             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                            attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                            attribution='Tiles &copy; Esri &mdash; Source: Esri...'
                         />
                     </LayersControl.BaseLayer>
-
-                    {/* Stratul Rutier (OpenStreetMap clasic) */}
                     <LayersControl.BaseLayer name="Harta Rutieră (OSM)">
-                        <TileLayer 
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-                            attribution='&copy; OpenStreetMap' 
-                        />
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
                     </LayersControl.BaseLayer>
-
-                    {/* Exemplu Mock pentru viitorul Strat NDVI */}
                     <LayersControl.Overlay name="Index NDVI (Mock)">
-                        <TileLayer
-                            // Acesta este doar un placeholder. În realitate va fi un WMS sau tiles generate dinamic
-                            url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png"
-                            opacity={0.4}
-                        />
+                        <TileLayer url="https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png" opacity={0.4} />
                     </LayersControl.Overlay>
-
                 </LayersControl>
 
                 <GeomanController 
@@ -220,12 +297,13 @@ const MapPage = () => {
                     setCalculatedArea={setCalculatedArea} 
                     setShowSaveForm={setShowSaveForm} 
                     mapRef={mapRef}
+                    selectedParcel={selectedParcel}
+                    setSelectedParcel={setSelectedParcel}
                 />
 
                 {parcels.map(parcel => {
                     try {
                         const coordinates = JSON.parse(parcel.coordinatesJson);
-                        // Culoare diferită în funcție de starea selecției
                         const isSelected = selectedParcel && selectedParcel.id === parcel.id;
                         
                         return (
@@ -233,12 +311,12 @@ const MapPage = () => {
                                 key={parcel.id} 
                                 positions={coordinates} 
                                 pathOptions={{ 
-                                    color: isSelected ? '#ffeb3b' : '#4CAF50', // Galben dacă e selectat, Verde altfel
+                                    color: isSelected ? '#ffeb3b' : '#4CAF50',
                                     weight: isSelected ? 4 : 2,
                                     fillOpacity: isSelected ? 0.4 : 0.2
                                 }}
                                 eventHandlers={{
-                                    click: () => handleParcelClick(parcel) // Deschide sidebar-ul la click
+                                    click: () => handleParcelClick(parcel)
                                 }}
                             >
                                 <Tooltip direction="center" permanent={false}>
@@ -249,15 +327,14 @@ const MapPage = () => {
                             </Polygon>
                         );
                     } catch (e) {
-                        console.error("Nu s-au putut parsa coordonatele pentru parcela " + parcel.id, e);
                         return null;
                     }
                 })}
             </MapContainer>
 
-            {/* Formularul pentru adăugare parcelă nouă (rămâne deasupra hărții) */}
+            {/* Formular Tarla Nouă */}
             {showSaveForm && (
-                <div style={{ position: 'absolute', top: '20px', left: '60px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', width: '280px' }}>
+                <div style={{ position: 'absolute', top: '70px', left: '20px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', width: '280px' }}>
                     <h3 style={{marginTop: 0, color: 'var(--primary-green)'}}>Tarla Nouă</h3>
                     <div style={{ marginBottom: '10px' }}>
                         <label style={{fontSize: '14px', color: '#555'}}>Nume:</label>
@@ -272,8 +349,8 @@ const MapPage = () => {
                     <div style={{ marginBottom: '15px', fontSize: '14px' }}><strong>Suprafață:</strong> {calculatedArea.toFixed(2)} ha</div>
                     {error && <p style={{ color: 'red', fontSize: '12px', margin: '5px 0' }}>{error}</p>}
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <button className="btn-primary" onClick={handleSave} style={{ flex: 1, padding: '8px' }}>Salvează</button>
-                        <button className="btn-secondary" onClick={handleCancel} style={{ flex: 1, padding: '8px' }}>Anulează</button>
+                        <button className="btn-primary" onClick={handleSaveNewParcel} style={{ flex: 1, padding: '8px' }}>Salvează</button>
+                        <button className="btn-secondary" onClick={handleCancelNewParcel} style={{ flex: 1, padding: '8px' }}>Anulează</button>
                     </div>
                 </div>
             )}
@@ -287,9 +364,8 @@ const MapPage = () => {
                             <button onClick={closeSidebar} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#888' }}>&times;</button>
                         </div>
 
-                        {/* Detalii de bază editabile */}
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Nume:</label>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Nume:</label>
                             <input 
                                 type="text" 
                                 value={selectedParcel.name} 
@@ -298,8 +374,8 @@ const MapPage = () => {
                             />
                         </div>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>Cultură Curentă:</label>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '5px', fontSize: '14px' }}>Cultură Curentă:</label>
                             <select 
                                 value={selectedParcel.cropType} 
                                 onChange={(e) => setSelectedParcel({...selectedParcel, cropType: e.target.value})}
@@ -309,37 +385,67 @@ const MapPage = () => {
                             </select>
                         </div>
 
-                        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: 'var(--light-gray)', borderRadius: '4px' }}>
-                            <strong>Suprafață totală:</strong> {selectedParcel.areaHectares.toFixed(2)} ha
+                        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: 'var(--light-gray)', borderRadius: '4px', fontSize: '14px' }}>
+                            <strong>Suprafață calculată (Geoman):</strong> {selectedParcel.areaHectares.toFixed(4)} ha
+                            <div style={{fontSize:'12px', color: '#666', marginTop:'5px'}}>
+                                <em>Dacă folosești uneltele din stânga pentru a trage de colțurile tarlalei pe hartă, suprafața se va actualiza automat aici.</em>
+                            </div>
                         </div>
 
-                        {/* Secțiunea de Activități (Simulare) */}
+                        {/* Secțiunea de Activități - GOLĂ INIȚIAL ȘI INTERACTIVĂ */}
                         <div style={{ marginBottom: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <h4 style={{ margin: '0 0 10px 0' }}>Activități Recente</h4>
-                            <ul style={{ paddingLeft: '20px', fontSize: '14px', color: '#555' }}>
-                                <li>Semănat - 15 Aprilie</li>
-                                <li>Erbicidat - 5 Mai</li>
-                                <li style={{color: 'var(--primary-green)', cursor: 'pointer'}}>+ Adaugă activitate nouă</li>
-                            </ul>
-                        </div>
+                            <h4 style={{ margin: '0 0 10px 0' }}>Jurnal Activități</h4>
+                            
+                            {(!localActivities[selectedParcel.id] || localActivities[selectedParcel.id].length === 0) ? (
+                                <p style={{fontSize: '13px', color: '#888', fontStyle: 'italic'}}>Nu există activități înregistrate.</p>
+                            ) : (
+                                <ul style={{ paddingLeft: '20px', fontSize: '13px', color: '#444', marginBottom: '15px' }}>
+                                    {localActivities[selectedParcel.id].map((act, index) => (
+                                        <li key={index} style={{marginBottom: '5px'}}>
+                                            <strong>{act.title}</strong> ({act.date}) <br/>
+                                            <span style={{color: 'var(--primary-green)'}}>↳ {getMachineryName(act.machineryId)}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
 
-                        {/* Secțiunea Indici (Mock pentru NDVI etc.) */}
-                        <div style={{ marginBottom: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <h4 style={{ margin: '0 0 10px 0' }}>Sănătate Cultură (Mock)</h4>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                <span>NDVI Mediu:</span>
-                                <span style={{ fontWeight: 'bold', color: 'var(--primary-green)' }}>0.78 (Optim)</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Umiditate (NDMI):</span>
-                                <span style={{ fontWeight: 'bold', color: '#FFC107' }}>0.45 (Atenție)</span>
-                            </div>
-                            <button className="btn-secondary" style={{ width: '100%', marginTop: '10px', fontSize: '12px' }}>Vezi Grafic Evoluție</button>
+                            {!showActivityForm ? (
+                                <button 
+                                    onClick={() => setShowActivityForm(true)}
+                                    style={{ background: 'none', border: 'none', color: 'var(--primary-green)', cursor: 'pointer', fontWeight: 'bold', padding: 0, fontSize: '14px' }}
+                                >
+                                    + Adaugă lucrare
+                                </button>
+                            ) : (
+                                <div style={{ backgroundColor: 'var(--light-gray)', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Ex: Arat, Erbicidat, Recoltat" 
+                                        value={newActivityTitle} 
+                                        onChange={e => setNewActivityTitle(e.target.value)}
+                                        style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box' }}
+                                    />
+                                    <select 
+                                        value={newActivityMachinery} 
+                                        onChange={e => setNewActivityMachinery(e.target.value)}
+                                        style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box' }}
+                                    >
+                                        <option value="" disabled>Alegeți utilajul...</option>
+                                        {machineryList.map(m => (
+                                            <option key={m.id} value={m.id}>{m.brandModel} ({m.licensePlate})</option>
+                                        ))}
+                                    </select>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button className="btn-primary" onClick={handleAddActivity} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Adaugă</button>
+                                        <button className="btn-secondary" onClick={() => setShowActivityForm(false)} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Anulează</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
-                            <button className="btn-primary" onClick={handleUpdateParcel} style={{ width: '100%', padding: '12px' }}>
-                                Salvează Modificările
+                            <button className="btn-primary" onClick={handleUpdateParcel} style={{ width: '100%', padding: '12px', fontSize: '16px' }}>
+                                Salvează Modificările în DB
                             </button>
                         </div>
                     </>

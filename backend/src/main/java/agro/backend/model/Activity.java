@@ -1,8 +1,11 @@
 package agro.backend.model;
+
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "activities")
@@ -19,7 +22,11 @@ public class Activity {
     @JoinColumn(name = "parcel_id")
     private Parcel parcel;
 
-    @ManyToOne
-    @JoinColumn(name = "machinery_id")
-    private Machinery machinery;
+    @ManyToMany
+    @JoinTable(
+        name = "activity_machinery", // Numele tabelei de legătură
+        joinColumns = @JoinColumn(name = "activity_id"), // Cheia spre Activity
+        inverseJoinColumns = @JoinColumn(name = "machinery_id") // Cheia spre Machinery
+    )
+    private Set<Machinery> machineries = new HashSet<>(); // Folosim o colecție pentru a stoca mai multe utilaje
 }
