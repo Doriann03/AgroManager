@@ -45,6 +45,7 @@ const FarmerDashboard = () => {
 
     return (
         <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '900px', margin: 'auto' }}>
+            {/* Header / Logout */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
                 <h1>Salut, {user?.username}!</h1>
                 <button onClick={handleLogout} style={{ backgroundColor: '#ff4444', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', borderRadius: '5px' }}>
@@ -52,9 +53,8 @@ const FarmerDashboard = () => {
                 </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', marginTop: '30px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
-                <h2>Panou de control</h2>
-                <p>De aici poți gestiona resursele fermei tale.</p>
+            {/* 3. Butoanele sus în interfață, imediat sub salut */}
+            <div style={{ display: 'flex', gap: '20px', marginTop: '20px', padding: '20px', backgroundColor: '#f9f9f9', borderRadius: '8px', alignItems: 'center', justifyContent: 'center' }}>
                 <button 
                     onClick={() => navigate('/map')}
                     style={{ 
@@ -64,10 +64,13 @@ const FarmerDashboard = () => {
                         border: 'none', 
                         borderRadius: '5px', 
                         fontSize: '16px', 
-                        cursor: 'pointer' 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
                     }}
                 >
-                    &#x1F5FA; Gestionează Harta Parcelelor
+                    <span style={{fontSize: '20px'}}>&#x1F5FA;</span> Gestionează Harta Parcelelor
                 </button>
                 <button 
                     onClick={() => navigate('/machinery')}
@@ -78,10 +81,13 @@ const FarmerDashboard = () => {
                         border: 'none', 
                         borderRadius: '5px', 
                         fontSize: '16px', 
-                        cursor: 'pointer' 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px'
                     }}
                 >
-                    &#x1F69C; Gestionează Utilaje
+                    <span style={{fontSize: '20px'}}>&#x1F69C;</span> Gestionează Utilaje
                 </button>
             </div>
 
@@ -90,13 +96,13 @@ const FarmerDashboard = () => {
                 {parcels.length > 0 ? (
                     <ul style={{ listStyle: 'none', padding: 0 }}>
                         {parcels.map(parcel => (
-                            <li key={parcel.id} style={{ background: '#f4f4f4', margin: '5px 0', padding: '10px', borderRadius: '3px' }}>
+                            <li key={parcel.id} style={{ background: '#f4f4f4', margin: '5px 0', padding: '10px', borderRadius: '3px', borderLeft: '4px solid #4CAF50' }}>
                                 <strong>{parcel.name}</strong> ({parcel.cropType}) - {parcel.areaHectares.toFixed(2)} ha
                             </li>
                         ))}
                     </ul>
                 ) : (
-                    <p>Nu ai nicio parcelă înregistrată. Mergi la hartă pentru a adăuga una.</p>
+                    <p style={{color: '#666', fontStyle: 'italic'}}>Nu ai nicio parcelă înregistrată. Apasă pe butonul de mai sus pentru a merge la hartă și a adăuga una.</p>
                 )}
             </div>
         </div>
