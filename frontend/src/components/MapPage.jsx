@@ -106,8 +106,13 @@ const MapPage = () => {
     const [activities, setActivities] = useState([]);
     const [showActivityForm, setShowActivityForm] = useState(false);
     const [newActivityTitle, setNewActivityTitle] = useState('');
-    // Am schimbat starea pentru a stoca un array de ID-uri de utilaje în loc de un singur ID
     const [newActivityMachineryIds, setNewActivityMachineryIds] = useState([]);
+
+    // --- State-uri NOI pentru Istoricul Culturilor (Crop Seasons) ---
+    const [cropSeasons, setCropSeasons] = useState([]);
+    const [showSeasonForm, setShowSeasonForm] = useState(false);
+    const [newSeasonYear, setNewSeasonYear] = useState(new Date().getFullYear());
+    const [newSeasonCrop, setNewSeasonCrop] = useState('Porumb');
 
     const navigate = useNavigate();
     const mapRef = useRef(null);
@@ -131,7 +136,6 @@ const MapPage = () => {
         try {
             const response = await apiClient.get('/api/machinery');
             setMachineryList(response.data);
-            // Am eliminat setarea utilajului implicit, deoarece folosim select multiplu
         } catch (err) {
             console.error("Eroare la preluarea utilajelor:", err);
         }
@@ -144,6 +148,17 @@ const MapPage = () => {
         } catch (err) {
             console.error("Eroare la preluarea activităților:", err);
             setActivities([]);
+        }
+    };
+
+    // Funcție nouă pentru preluarea Crop Seasons
+    const fetchCropSeasonsForParcel = async (parcelId) => {
+        try {
+            const response = await apiClient.get(`/api/crop-seasons/parcel/${parcelId}`);
+            setCropSeasons(response.data);
+        } catch (err) {
+            console.error("Eroare la preluarea sezoanelor:", err);
+            setCropSeasons([]);
         }
     };
 
@@ -206,18 +221,22 @@ const MapPage = () => {
         setSelectedParcel(parcel);
         setIsSidebarOpen(true);
         setShowActivityForm(false);
+        setShowSeasonForm(false); // Resetăm noul formular
         
-        const loadActivities = async () => {
+        const loadParcelData = async () => {
             await fetchActivitiesForParcel(parcel.id);
+            await fetchCropSeasonsForParcel(parcel.id); // Încărcăm istoric la click
         };
-        loadActivities();
+        loadParcelData();
     };
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
         setSelectedParcel(null);
         setShowActivityForm(false);
+        setShowSeasonForm(false);
         setActivities([]);
+        setCropSeasons([]);
     };
 
     const handleUpdateParcel = async () => {
@@ -238,14 +257,14 @@ const MapPage = () => {
         const activityPayload = {
             title: newActivityTitle,
             parcelId: selectedParcel.id,
-            machineryIds: newActivityMachineryIds // Trimitem lista de ID-uri
+            machineryIds: newActivityMachineryIds 
         };
 
         try {
             await apiClient.post('/api/activities', activityPayload);
             await fetchActivitiesForParcel(selectedParcel.id);
             setNewActivityTitle('');
-            setNewActivityMachineryIds([]); // Resetăm selecția după salvare
+            setNewActivityMachineryIds([]);
             setShowActivityForm(false);
         } catch (err) {
              console.error("Eroare la salvarea activității:", err);
@@ -253,16 +272,36 @@ const MapPage = () => {
         }
     };
 
-    // Funcție pentru a gestiona schimbările în select-ul multiplu
+    // Funcția nouă pentru salvarea sezonului în DB
+    const handleAddCropSeason = async () => {
+        if (!newSeasonYear || !newSeasonCrop || !selectedParcel) return;
+
+        const seasonPayload = {
+            harvestYear: newSeasonYear,
+            cropType: newSeasonCrop,
+            parcelId: selectedParcel.id
+        };
+
+        try {
+            await apiClient.post('/api/crop-seasons', seasonPayload);
+            await fetchCropSeasonsForParcel(selectedParcel.id); // Refresh la listă
+            setNewSeasonYear(new Date().getFullYear()); // Resetăm la anul curent
+            setNewSeasonCrop('Porumb');
+            setShowSeasonForm(false);
+        } catch (err) {
+            console.error("Eroare la adăugarea sezonului:", err);
+            alert("Nu s-a putut salva sezonul.");
+        }
+    };
+
     const handleMachinerySelectChange = (e) => {
-        // e.target.options este un obiect de tip HTMLOptionsCollection
         const selectedOptions = Array.from(e.target.options)
                                      .filter(option => option.selected)
                                      .map(option => option.value);
         setNewActivityMachineryIds(selectedOptions);
     };
 
-    const cropOptions = ['Grâu', 'Porumb', 'Rapiță', 'Floarea Soarelui', 'Orz', 'Soia', 'Altele'];
+    const cropOptions = ['Grâu', 'Porumb', 'Rapiță', 'Floarea Soarelui', 'Orz', 'Soia', 'Sfeclă', 'Altele'];
 
     const sidebarStyle = {
         position: 'absolute',
@@ -348,7 +387,7 @@ const MapPage = () => {
                                         });
                                         
                                         setIsSidebarOpen(true);
-                                        fetchActivitiesForParcel(parcel.id).catch(console.error);
+                                        // Refetch data for safety if needed
                                     }
                                 }}
                             >
@@ -421,7 +460,8 @@ const MapPage = () => {
                             <strong>Suprafață calculată (Geoman):</strong> {selectedParcel.areaHectares.toFixed(4)} ha
                         </div>
 
-                        <div style={{ marginBottom: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                        {/* --- Secțiunea Jurnal Activități --- */}
+                        <div style={{ marginBottom: '10px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                             <h4 style={{ margin: '0 0 10px 0' }}>Jurnal Activități</h4>
                             
                             {activities.length === 0 ? (
@@ -456,20 +496,19 @@ const MapPage = () => {
                                 <div style={{ backgroundColor: 'var(--light-gray)', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
                                     <input 
                                         type="text" 
-                                        placeholder="Ex: Arat, Erbicidat, Recoltat" 
+                                        placeholder="Ex: Arat, Erbicidat" 
                                         value={newActivityTitle} 
                                         onChange={e => setNewActivityTitle(e.target.value)}
                                         style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box' }}
                                     />
-                                    {/* Am transformat select-ul într-unul multiplu */}
                                     <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px' }}>
                                         Selectați utilajele (Ctrl/Cmd + click pentru mai multe):
                                     </label>
                                     <select 
-                                        multiple // Permite selecția multiplă
+                                        multiple 
                                         value={newActivityMachineryIds} 
-                                        onChange={handleMachinerySelectChange} // Handler personalizat
-                                        style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box', height: '100px' }} // Am adăugat height pentru vizibilitate
+                                        onChange={handleMachinerySelectChange}
+                                        style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box', height: '80px' }}
                                     >
                                         {machineryList.map(m => (
                                             <option key={m.id} value={m.id}>{m.name} ({m.model})</option>
@@ -478,6 +517,60 @@ const MapPage = () => {
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <button className="btn-primary" onClick={handleAddActivity} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Salvează</button>
                                         <button className="btn-secondary" onClick={() => setShowActivityForm(false)} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Anulează</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* --- Secțiunea NOUĂ: Istoricul Culturilor (Crop Seasons) --- */}
+                        <div style={{ marginBottom: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                            <h4 style={{ margin: '0 0 10px 0' }}>Istoricul Culturilor (Rotație)</h4>
+                            
+                            {cropSeasons.length === 0 ? (
+                                <p style={{fontSize: '13px', color: '#888', fontStyle: 'italic'}}>Niciun istoric înregistrat.</p>
+                            ) : (
+                                <ul style={{ paddingLeft: '20px', fontSize: '13px', color: '#444', marginBottom: '15px' }}>
+                                    {cropSeasons.map((season) => (
+                                        <li key={season.id} style={{marginBottom: '5px'}}>
+                                            <strong>Anul {season.harvestYear}:</strong> <span style={{color: 'var(--primary-green)', fontWeight: 'bold'}}>{season.cropType}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+
+                            {!showSeasonForm ? (
+                                <button 
+                                    onClick={() => setShowSeasonForm(true)}
+                                    style={{ background: 'none', border: 'none', color: '#FF9800', cursor: 'pointer', fontWeight: 'bold', padding: 0, fontSize: '14px' }}
+                                >
+                                    + Adaugă an/cultură
+                                </button>
+                            ) : (
+                                <div style={{ backgroundColor: '#fff8e1', padding: '10px', borderRadius: '5px', marginTop: '10px', border: '1px solid #ffe082' }}>
+                                    <div style={{display: 'flex', gap: '10px', marginBottom: '8px'}}>
+                                        <div style={{flex: 1}}>
+                                            <label style={{fontSize: '12px', color: '#555', display: 'block', marginBottom: '2px'}}>Anul Recoltei:</label>
+                                            <input 
+                                                type="number" 
+                                                value={newSeasonYear} 
+                                                onChange={e => setNewSeasonYear(e.target.value)}
+                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div style={{flex: 2}}>
+                                            <label style={{fontSize: '12px', color: '#555', display: 'block', marginBottom: '2px'}}>Cultura:</label>
+                                            <select 
+                                                value={newSeasonCrop} 
+                                                onChange={e => setNewSeasonCrop(e.target.value)}
+                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                                            >
+                                                {cropOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button className="btn-primary" onClick={handleAddCropSeason} style={{ padding: '5px 10px', fontSize: '12px', flex: 1, backgroundColor: '#FF9800', borderColor: '#FF9800' }}>Salvează Istoric</button>
+                                        <button className="btn-secondary" onClick={() => setShowSeasonForm(false)} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Anulează</button>
                                     </div>
                                 </div>
                             )}
