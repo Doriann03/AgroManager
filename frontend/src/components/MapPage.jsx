@@ -89,9 +89,27 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
     return null;
 };
 
+// Functie helper pentru culori pe baza culturii
+const getCropColor = (cropType, isSelected) => {
+    // Daca e selectat, il facem galben aprins sau il pastram dar mai vizibil (folosim galben in acest caz cum era inainte)
+    if (isSelected) return '#ffeb3b';
+    
+    switch(cropType) {
+        case 'Grâu': return '#fbc02d'; // Galben grâu
+        case 'Porumb': return '#388e3c'; // Verde porumb
+        case 'Rapiță': return '#fdd835'; // Galben rapiță intens
+        case 'Floarea Soarelui': return '#ff8f00'; // Portocaliu
+        case 'Orz': return '#cddc39'; // Verde-gălbui
+        case 'Soia': return '#8d6e63'; // Maroniu-verzui
+        case 'Sfeclă': return '#d32f2f'; // Roșu sfeclă
+        default: return '#4CAF50'; // Verde default
+    }
+};
+
 const MapPage = () => {
     const [parcels, setParcels] = useState([]);
     const [machineryList, setMachineryList] = useState([]); 
+    const [inventoryList, setInventoryList] = useState([]); 
     
     const [showSaveForm, setShowSaveForm] = useState(false);
     const [newParcelName, setNewParcelName] = useState('');
@@ -107,8 +125,12 @@ const MapPage = () => {
     const [showActivityForm, setShowActivityForm] = useState(false);
     const [newActivityTitle, setNewActivityTitle] = useState('');
     const [newActivityMachineryIds, setNewActivityMachineryIds] = useState([]);
+    
+    const [showConsumptions, setShowConsumptions] = useState(false);
+    const [activityConsumptions, setActivityConsumptions] = useState([]); 
+    const [selectedInventoryItem, setSelectedInventoryItem] = useState('');
+    const [consumptionQuantity, setConsumptionQuantity] = useState('');
 
-    // --- State-uri NOI pentru Istoricul Culturilor (Crop Seasons) ---
     const [cropSeasons, setCropSeasons] = useState([]);
     const [showSeasonForm, setShowSeasonForm] = useState(false);
     const [newSeasonYear, setNewSeasonYear] = useState(new Date().getFullYear());
@@ -141,6 +163,15 @@ const MapPage = () => {
         }
     }, []);
 
+    const fetchInventory = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/api/inventory');
+            setInventoryList(response.data);
+        } catch (err) {
+            console.error("Eroare la preluarea inventarului:", err);
+        }
+    }, []);
+
     const fetchActivitiesForParcel = async (parcelId) => {
         try {
             const response = await apiClient.get(`/api/activities/parcel/${parcelId}`);
@@ -151,7 +182,6 @@ const MapPage = () => {
         }
     };
 
-    // Funcție nouă pentru preluarea Crop Seasons
     const fetchCropSeasonsForParcel = async (parcelId) => {
         try {
             const response = await apiClient.get(`/api/crop-seasons/parcel/${parcelId}`);
@@ -169,6 +199,7 @@ const MapPage = () => {
             if (isMounted) {
                 await fetchParcels();
                 await fetchMachinery();
+                await fetchInventory(); 
             }
         };
 
@@ -177,7 +208,7 @@ const MapPage = () => {
         return () => {
             isMounted = false;
         };
-    }, [fetchParcels, fetchMachinery]);
+    }, [fetchParcels, fetchMachinery, fetchInventory]);
 
     const handleSaveNewParcel = async () => {
         if (!newParcelName || !drawnLayer) {
@@ -221,11 +252,11 @@ const MapPage = () => {
         setSelectedParcel(parcel);
         setIsSidebarOpen(true);
         setShowActivityForm(false);
-        setShowSeasonForm(false); // Resetăm noul formular
+        setShowSeasonForm(false); 
         
         const loadParcelData = async () => {
             await fetchActivitiesForParcel(parcel.id);
-            await fetchCropSeasonsForParcel(parcel.id); // Încărcăm istoric la click
+            await fetchCropSeasonsForParcel(parcel.id); 
         };
         loadParcelData();
     };
@@ -237,6 +268,8 @@ const MapPage = () => {
         setShowSeasonForm(false);
         setActivities([]);
         setCropSeasons([]);
+        setActivityConsumptions([]);
+        setShowConsumptions(false);
     };
 
     const handleUpdateParcel = async () => {
@@ -251,28 +284,67 @@ const MapPage = () => {
         }
     };
 
-    const handleAddActivity = async () => {
-        if (!newActivityTitle || !selectedParcel || newActivityMachineryIds.length === 0) return;
+    const handleAddConsumptionToList = () => {
+        if (!selectedInventoryItem || !consumptionQuantity) return;
         
+        const item = inventoryList.find(i => i.id.toString() === selectedInventoryItem);
+        if (item && parseFloat(consumptionQuantity) > item.quantityAvailable) {
+             alert(`Atenție! Nu aveți suficient stoc. Disponibil: ${item.quantityAvailable} ${item.unitOfMeasure}`);
+             return;
+        }
+
+        const newConsumption = {
+            inventoryItemId: parseInt(selectedInventoryItem),
+            quantityUsed: parseFloat(consumptionQuantity),
+            itemName: item ? item.name : '',
+            unit: item ? item.unitOfMeasure : ''
+        };
+
+        setActivityConsumptions([...activityConsumptions, newConsumption]);
+        
+        setSelectedInventoryItem('');
+        setConsumptionQuantity('');
+    };
+
+    const handleRemoveConsumptionFromList = (indexToRemove) => {
+        setActivityConsumptions(activityConsumptions.filter((_, index) => index !== indexToRemove));
+    };
+
+    const handleAddActivity = async () => {
+        if (!newActivityTitle || !selectedParcel) {
+            alert("Completați titlul activității.");
+            return;
+        }
+        
+        const consumptionsPayload = activityConsumptions.map(c => ({
+            inventoryItemId: c.inventoryItemId,
+            quantityUsed: c.quantityUsed
+        }));
+
         const activityPayload = {
             title: newActivityTitle,
             parcelId: selectedParcel.id,
-            machineryIds: newActivityMachineryIds 
+            machineryIds: newActivityMachineryIds,
+            consumptions: consumptionsPayload 
         };
 
         try {
             await apiClient.post('/api/activities', activityPayload);
             await fetchActivitiesForParcel(selectedParcel.id);
+            await fetchInventory(); 
+            
             setNewActivityTitle('');
             setNewActivityMachineryIds([]);
+            setActivityConsumptions([]);
+            setShowConsumptions(false);
             setShowActivityForm(false);
         } catch (err) {
              console.error("Eroare la salvarea activității:", err);
-             alert("Nu s-a putut salva activitatea.");
+             const errorMsg = err.response?.data?.message || "Nu s-a putut salva activitatea. Verificați stocurile.";
+             alert(errorMsg);
         }
     };
 
-    // Funcția nouă pentru salvarea sezonului în DB
     const handleAddCropSeason = async () => {
         if (!newSeasonYear || !newSeasonCrop || !selectedParcel) return;
 
@@ -284,8 +356,8 @@ const MapPage = () => {
 
         try {
             await apiClient.post('/api/crop-seasons', seasonPayload);
-            await fetchCropSeasonsForParcel(selectedParcel.id); // Refresh la listă
-            setNewSeasonYear(new Date().getFullYear()); // Resetăm la anul curent
+            await fetchCropSeasonsForParcel(selectedParcel.id); 
+            setNewSeasonYear(new Date().getFullYear()); 
             setNewSeasonCrop('Porumb');
             setShowSeasonForm(false);
         } catch (err) {
@@ -362,15 +434,17 @@ const MapPage = () => {
                     try {
                         const coordinates = JSON.parse(parcel.coordinatesJson);
                         const isSelected = selectedParcel && selectedParcel.id === parcel.id;
+                        // Aplicăm funcția de culoare pe baza culturii
+                        const parcelColor = getCropColor(parcel.cropType, isSelected);
                         
                         return (
                             <Polygon 
                                 key={parcel.id} 
                                 positions={coordinates} 
                                 pathOptions={{ 
-                                    color: isSelected ? '#ffeb3b' : '#4CAF50',
+                                    color: parcelColor,
                                     weight: isSelected ? 4 : 2,
-                                    fillOpacity: isSelected ? 0.4 : 0.2
+                                    fillOpacity: isSelected ? 0.6 : 0.4 // Am marit putin opacitatea ca sa se vada mai bine culoarea culturii pe satelit
                                 }}
                                 eventHandlers={{
                                     click: () => handleParcelClick(parcel),
@@ -387,7 +461,6 @@ const MapPage = () => {
                                         });
                                         
                                         setIsSidebarOpen(true);
-                                        // Refetch data for safety if needed
                                     }
                                 }}
                             >
@@ -460,7 +533,6 @@ const MapPage = () => {
                             <strong>Suprafață calculată (Geoman):</strong> {selectedParcel.areaHectares.toFixed(4)} ha
                         </div>
 
-                        {/* --- Secțiunea Jurnal Activități --- */}
                         <div style={{ marginBottom: '10px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                             <h4 style={{ margin: '0 0 10px 0' }}>Jurnal Activități</h4>
                             
@@ -469,17 +541,32 @@ const MapPage = () => {
                             ) : (
                                 <ul style={{ paddingLeft: '20px', fontSize: '13px', color: '#444', marginBottom: '15px' }}>
                                     {activities.map((act) => (
-                                        <li key={act.id} style={{marginBottom: '10px'}}>
-                                            <strong>{act.title}</strong> 
+                                        <li key={act.id} style={{marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px dashed #eee'}}>
+                                            <strong style={{fontSize: '14px'}}>{act.title}</strong> 
                                             <span style={{color: '#888', marginLeft: '5px'}}>
                                                 ({new Date(act.startDate).toLocaleDateString('ro-RO')})
                                             </span>
-                                            <br/>
-                                            {act.machineries && act.machineries.map(m => (
-                                                 <div key={m.id} style={{color: 'var(--primary-green)', marginTop: '2px'}}>
-                                                     ↳ Utilaj: {m.name} ({m.model})
+                                            
+                                            {/* Afișare utilaje folosite */}
+                                            {act.machineries && act.machineries.length > 0 && (
+                                                 <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
+                                                     🚜 <span style={{fontWeight: '500'}}>Utilaje:</span> {act.machineries.map(m => `${m.name}`).join(', ')}
                                                  </div>
-                                            ))}
+                                            )}
+                                            
+                                            {/* Afișare consumuri (Substanțe/Inputuri) */}
+                                            {act.consumptions && act.consumptions.length > 0 && (
+                                                <div style={{marginTop: '4px', marginLeft: '10px'}}>
+                                                    🧪 <span style={{fontWeight: '500', color: '#555'}}>Consum:</span>
+                                                    <ul style={{margin: '2px 0 0 0', paddingLeft: '20px', color: '#d32f2f', fontWeight: 'bold'}}>
+                                                        {act.consumptions.map(cons => (
+                                                            <li key={cons.id}>
+                                                                {cons.quantityUsed} {cons.inventoryItem.unitOfMeasure} de {cons.inventoryItem.name}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>
@@ -493,36 +580,85 @@ const MapPage = () => {
                                     + Adaugă lucrare
                                 </button>
                             ) : (
-                                <div style={{ backgroundColor: 'var(--light-gray)', padding: '10px', borderRadius: '5px', marginTop: '10px' }}>
+                                <div style={{ backgroundColor: 'var(--light-gray)', padding: '15px', borderRadius: '8px', marginTop: '10px', border: '1px solid var(--border-color)' }}>
                                     <input 
                                         type="text" 
                                         placeholder="Ex: Arat, Erbicidat" 
                                         value={newActivityTitle} 
                                         onChange={e => setNewActivityTitle(e.target.value)}
-                                        style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box' }}
+                                        style={{ width: '100%', padding: '8px', marginBottom: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
                                     />
-                                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px' }}>
-                                        Selectați utilajele (Ctrl/Cmd + click pentru mai multe):
+                                    
+                                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+                                        🚜 Selectați utilajele:
                                     </label>
                                     <select 
                                         multiple 
                                         value={newActivityMachineryIds} 
                                         onChange={handleMachinerySelectChange}
-                                        style={{ width: '100%', padding: '6px', marginBottom: '8px', boxSizing: 'border-box', height: '80px' }}
+                                        style={{ width: '100%', padding: '6px', marginBottom: '15px', boxSizing: 'border-box', height: '60px', border: '1px solid #ccc', borderRadius: '4px' }}
                                     >
                                         {machineryList.map(m => (
                                             <option key={m.id} value={m.id}>{m.name} ({m.model})</option>
                                         ))}
                                     </select>
+
+                                    {/* --- Zona de Adăugare Consumuri --- */}
+                                    <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fff', borderRadius: '4px', border: '1px dashed #ccc' }}>
+                                        <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                                            🧪 Consumabile (Erbicid, Sămânță etc.):
+                                        </label>
+                                        
+                                        {activityConsumptions.length > 0 && (
+                                            <ul style={{ paddingLeft: '20px', fontSize: '12px', marginBottom: '10px', color: '#d32f2f' }}>
+                                                {activityConsumptions.map((cons, idx) => (
+                                                    <li key={idx}>
+                                                        {cons.quantityUsed} {cons.unit} - {cons.itemName} 
+                                                        <button onClick={() => handleRemoveConsumptionFromList(idx)} style={{background:'none', border:'none', color:'red', cursor:'pointer', marginLeft:'5px'}}>✖</button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+
+                                        {!showConsumptions ? (
+                                            <button type="button" onClick={() => setShowConsumptions(true)} style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', fontSize: '12px', padding: 0 }}>
+                                                + Adaugă produs din Magazie
+                                            </button>
+                                        ) : (
+                                            <div style={{ display: 'flex', gap: '5px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                <select 
+                                                    value={selectedInventoryItem} 
+                                                    onChange={e => setSelectedInventoryItem(e.target.value)}
+                                                    style={{ flex: '1 1 120px', padding: '6px', fontSize: '12px' }}
+                                                >
+                                                    <option value="">Alege produs...</option>
+                                                    {inventoryList.map(item => (
+                                                        <option key={item.id} value={item.id}>
+                                                            {item.name} (Stoc: {item.quantityAvailable}{item.unitOfMeasure})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <input 
+                                                    type="number" 
+                                                    placeholder="Cantitate" 
+                                                    value={consumptionQuantity} 
+                                                    onChange={e => setConsumptionQuantity(e.target.value)}
+                                                    style={{ flex: '0 0 70px', padding: '6px', fontSize: '12px' }}
+                                                />
+                                                <button type="button" onClick={handleAddConsumptionToList} style={{ padding: '6px 10px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Adaugă</button>
+                                                <button type="button" onClick={() => setShowConsumptions(false)} style={{ padding: '6px 10px', backgroundColor: '#ccc', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Închide</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
                                     <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button className="btn-primary" onClick={handleAddActivity} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Salvează</button>
-                                        <button className="btn-secondary" onClick={() => setShowActivityForm(false)} style={{ padding: '5px 10px', fontSize: '12px', flex: 1 }}>Anulează</button>
+                                        <button className="btn-primary" onClick={handleAddActivity} style={{ padding: '8px 10px', fontSize: '14px', flex: 1, fontWeight: 'bold' }}>Salvează Lucrarea</button>
+                                        <button className="btn-secondary" onClick={() => setShowActivityForm(false)} style={{ padding: '8px 10px', fontSize: '14px', flex: 1 }}>Anulează</button>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* --- Secțiunea NOUĂ: Istoricul Culturilor (Crop Seasons) --- */}
                         <div style={{ marginBottom: '20px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                             <h4 style={{ margin: '0 0 10px 0' }}>Istoricul Culturilor (Rotație)</h4>
                             

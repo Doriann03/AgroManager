@@ -24,6 +24,13 @@ public class Machinery {
 
     private String model; // Ex: "8R 410"
 
+    private String licensePlate; // Adăugat: Număr înmatriculare
+
+    private Integer workHours; // Adăugat: Ore de funcționare
+
+    @Enumerated(EnumType.STRING)
+    private MachineryStatus status; // Adăugat: Statusul utilajului
+
     private LocalDate purchaseDate;
 
     @ManyToOne(fetch = FetchType.LAZY)

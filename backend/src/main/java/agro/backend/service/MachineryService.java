@@ -28,6 +28,25 @@ public class MachineryService {
         return machineryRepository.save(machinery);
     }
 
+    public Machinery updateMachinery(Long id, Machinery updatedMachinery, String username) {
+        Machinery existingMachinery = machineryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Utilajul nu a fost găsit"));
+
+        if (!existingMachinery.getOwner().getUsername().equals(username)) {
+            throw new RuntimeException("Nu aveți permisiunea să modificați acest utilaj.");
+        }
+
+        existingMachinery.setName(updatedMachinery.getName());
+        existingMachinery.setType(updatedMachinery.getType());
+        existingMachinery.setModel(updatedMachinery.getModel());
+        existingMachinery.setLicensePlate(updatedMachinery.getLicensePlate());
+        existingMachinery.setWorkHours(updatedMachinery.getWorkHours());
+        existingMachinery.setStatus(updatedMachinery.getStatus());
+        existingMachinery.setPurchaseDate(updatedMachinery.getPurchaseDate());
+
+        return machineryRepository.save(existingMachinery);
+    }
+
     public void deleteMachinery(Long id) {
         machineryRepository.deleteById(id);
     }

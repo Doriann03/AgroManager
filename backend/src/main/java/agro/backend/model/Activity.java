@@ -1,10 +1,13 @@
 package agro.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -24,9 +27,14 @@ public class Activity {
 
     @ManyToMany
     @JoinTable(
-        name = "activity_machinery", // Numele tabelei de legătură
-        joinColumns = @JoinColumn(name = "activity_id"), // Cheia spre Activity
-        inverseJoinColumns = @JoinColumn(name = "machinery_id") // Cheia spre Machinery
+        name = "activity_machinery", 
+        joinColumns = @JoinColumn(name = "activity_id"), 
+        inverseJoinColumns = @JoinColumn(name = "machinery_id") 
     )
-    private Set<Machinery> machineries = new HashSet<>(); // Folosim o colecție pentru a stoca mai multe utilaje
+    private Set<Machinery> machineries = new HashSet<>();
+
+    // Legătura cu consumurile
+    @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("activity") // Pentru a preveni bucle infinite in JSON
+    private List<ActivityConsumption> consumptions = new ArrayList<>();
 }

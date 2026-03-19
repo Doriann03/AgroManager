@@ -3,18 +3,16 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './components/Login';
 import Register from './components/Register';
 import FarmerDashboard from './components/FarmerDashboard';
-import MapPage from './components/MapPage'; // Importăm componenta MapPage
-import MachineryPage from './components/MachineryPage'; // Importăm componenta MachineryPage
-import './App.css'; // Importăm stilurile globale
+import MapPage from './components/MapPage'; 
+import MachineryPage from './components/MachineryPage'; 
+import InventoryPage from './components/InventoryPage'; // Importăm noua pagină de Magazie
+import './App.css'; 
 
-// Componente simple pentru test (pagini temporare)
 const AdminDashboard = () => <div className="page-container"><h1>Bun venit, Admin!</h1></div>;
 
-// Un layout simplu pentru paginile autentificate
 const AppLayout = ({ children }) => {
   return (
     <div className="page-container">
-      {/* Aici ar putea veni un header sau un meniu lateral comun */}
       <main>{children}</main>
     </div>
   );
@@ -24,12 +22,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Rute publice */}
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Rute protejate (încapsulate în layout) */}
         <Route 
           path="/farmer" 
           element={<AppLayout><FarmerDashboard /></AppLayout>} 
@@ -46,7 +42,11 @@ function App() {
           path="/machinery" 
           element={<AppLayout><MachineryPage /></AppLayout>} 
         />
-
+        {/* Adăugăm ruta pentru Magazie */}
+        <Route 
+          path="/inventory" 
+          element={<AppLayout><InventoryPage /></AppLayout>} 
+        />
       </Routes>
     </Router>
   );
