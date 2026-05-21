@@ -64,25 +64,25 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Eroare: Numele de utilizator este deja folosit!");
         }
 
-        // Creăm utilizatorul (managerul)
+        // 1. Creăm și salvăm utilizatorul (managerul) FĂRĂ fermă
         User manager = new User();
         manager.setUsername(registerRequest.getUsername());
         manager.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         manager.setEmail(registerRequest.getEmail());
         manager.setRole(UserRole.FARM_MANAGER);
+        User savedManager = userRepository.save(manager);
 
-        // Creăm ferma
+        // 2. Creăm ferma și o legăm de managerul deja salvat
         Farm farm = new Farm();
         farm.setName(registerRequest.getFarmName());
         farm.setAddress(registerRequest.getFarmAddress());
-        farm.setContactEmail(registerRequest.getFarmContactEmail());
-        farm.setCreatedBy(manager);
+        farm.setContactEmail(registerRequest.getFarmContactEmail() != null ? registerRequest.getFarmContactEmail() : registerRequest.getEmail());
+        farm.setCreatedBy(savedManager);
+        Farm savedFarm = farmRepository.save(farm);
 
-        // Asociem ferma cu managerul
-        manager.setFarm(farm);
-
-        // Salvăm managerul (și ferma, datorită cascadei)
-        userRepository.save(manager);
+        // 3. Actualizăm managerul cu ferma creată și salvăm din nou
+        savedManager.setFarm(savedFarm);
+        userRepository.save(savedManager);
 
         return ResponseEntity.ok("Utilizator și fermă înregistrate cu succes!");
     }
