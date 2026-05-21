@@ -1,5 +1,6 @@
 package agro.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,11 +31,17 @@ public class User implements UserDetails {
 
     private String email;
 
-    private String farmName;
+    // Câmpul farmName a fost eliminat, deoarece detaliile fermei vor veni din entitatea Farm
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
+
+    // Legătura către entitatea Farm
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "farm_id") // farm_id poate fi NULL pentru SUPER_ADMIN
+    @JsonIgnore // Evităm bucle infinite în JSON
+    private Farm farm;
 
     // Implementarea metodelor din interfața UserDetails
 
@@ -50,13 +57,12 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Această metodă îi spune lui Spring ce rol are utilizatorul
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // Putem adăuga logică complexă aici mai târziu
+        return true;
     }
 
     @Override

@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface MachineryRepository extends JpaRepository<Machinery, Long> {
-    List<Machinery> findAllByOwnerUsername(String username);
+    List<Machinery> findAllByFarmId(Long farmId);
 }

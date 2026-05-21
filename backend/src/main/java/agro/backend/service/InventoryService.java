@@ -17,22 +17,23 @@ public class InventoryService {
     private final InventoryItemRepository inventoryItemRepository;
     private final UserRepository userRepository;
 
-    public List<InventoryItem> getInventoryByUsername(String username) {
-        return inventoryItemRepository.findAllByOwnerUsername(username);
+    public List<InventoryItem> getInventoryByFarm(Long farmId) {
+        return inventoryItemRepository.findAllByFarmId(farmId);
     }
 
-    public InventoryItem saveItem(InventoryItem item, String username) {
-        User owner = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        item.setOwner(owner);
+    public InventoryItem saveItem(InventoryItem item, User user) {
+        if (user.getFarm() == null) {
+            throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
+        }
+        item.setFarm(user.getFarm());
         return inventoryItemRepository.save(item);
     }
     
-    public InventoryItem updateItem(Long id, InventoryItem updatedItem, String username) {
+    public InventoryItem updateItem(Long id, InventoryItem updatedItem, User user) {
         InventoryItem existingItem = inventoryItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produsul nu a fost găsit"));
 
-        if (!existingItem.getOwner().getUsername().equals(username)) {
+        if (user.getFarm() == null || !existingItem.getFarm().getId().equals(user.getFarm().getId())) {
             throw new RuntimeException("Nu aveți permisiunea să modificați acest produs.");
         }
 

@@ -17,22 +17,23 @@ public class MachineryService {
     private final MachineryRepository machineryRepository;
     private final UserRepository userRepository;
 
-    public List<Machinery> getMachineryByUsername(String username) {
-        return machineryRepository.findAllByOwnerUsername(username);
+    public List<Machinery> getMachineryByFarm(Long farmId) {
+        return machineryRepository.findAllByFarmId(farmId);
     }
 
-    public Machinery saveMachinery(Machinery machinery, String username) {
-        User owner = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost găsit: " + username));
-        machinery.setOwner(owner);
+    public Machinery saveMachinery(Machinery machinery, User user) {
+        if (user.getFarm() == null) {
+            throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
+        }
+        machinery.setFarm(user.getFarm());
         return machineryRepository.save(machinery);
     }
 
-    public Machinery updateMachinery(Long id, Machinery updatedMachinery, String username) {
+    public Machinery updateMachinery(Long id, Machinery updatedMachinery, User user) {
         Machinery existingMachinery = machineryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilajul nu a fost găsit"));
 
-        if (!existingMachinery.getOwner().getUsername().equals(username)) {
+        if (user.getFarm() == null || !existingMachinery.getFarm().getId().equals(user.getFarm().getId())) {
             throw new RuntimeException("Nu aveți permisiunea să modificați acest utilaj.");
         }
 

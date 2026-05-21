@@ -22,12 +22,13 @@ public class Parcel {
 
     private double areaHectares;
 
-    @Lob // Specifică un câmp de tip Large Object, potrivit pentru JSON lung
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String coordinatesJson;
 
+    // O parcelă aparține unei ferme, nu unui utilizator individual
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    @JsonIgnore // Ignorăm owner-ul la serializare pentru a nu crea bucle infinite
-    private User owner;
+    @JoinColumn(name = "farm_id", nullable = false)
+    @JsonIgnore
+    private Farm farm;
 }

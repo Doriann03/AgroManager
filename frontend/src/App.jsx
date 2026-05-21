@@ -2,17 +2,22 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Register from './components/Register';
-import FarmerDashboard from './components/FarmerDashboard';
 import MapPage from './components/MapPage'; 
 import MachineryPage from './components/MachineryPage'; 
-import InventoryPage from './components/InventoryPage'; // Importăm noua pagină de Magazie
+import InventoryPage from './components/InventoryPage';
+
+// Importăm noile dashboard-uri
+import SuperAdminDashboard from './components/SuperAdminDashboard';
+import ManagerDashboard from './components/ManagerDashboard';
+import AgronomistDashboard from './components/AgronomistDashboard';
+import WorkerDashboard from './components/WorkerDashboard';
+
 import './App.css'; 
 
-const AdminDashboard = () => <div className="page-container"><h1>Bun venit, Admin!</h1></div>;
-
+// Layout-ul general pentru paginile interioare, cu o lățime maximă
 const AppLayout = ({ children }) => {
   return (
-    <div className="page-container">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <main>{children}</main>
     </div>
   );
@@ -22,31 +27,25 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Rute Publice */}
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        <Route 
-          path="/farmer" 
-          element={<AppLayout><FarmerDashboard /></AppLayout>} 
-        />
-        <Route 
-          path="/admin" 
-          element={<AppLayout><AdminDashboard /></AppLayout>} 
-        />
-        <Route 
-          path="/map" 
-          element={<AppLayout><MapPage /></AppLayout>} 
-        />
-        <Route 
-          path="/machinery" 
-          element={<AppLayout><MachineryPage /></AppLayout>} 
-        />
-        {/* Adăugăm ruta pentru Magazie */}
-        <Route 
-          path="/inventory" 
-          element={<AppLayout><InventoryPage /></AppLayout>} 
-        />
+        {/* Rute pentru fiecare rol */}
+        <Route path="/super-admin" element={<AppLayout><SuperAdminDashboard /></AppLayout>} />
+        <Route path="/manager" element={<AppLayout><ManagerDashboard /></AppLayout>} />
+        <Route path="/agronomist" element={<AppLayout><AgronomistDashboard /></AppLayout>} />
+        <Route path="/worker" element={<WorkerDashboard />} /> {/* Worker are layout-ul propriu, full-screen */}
+
+        {/* Rute partajate (accesibile de mai multe roluri) */}
+        <Route path="/map" element={<MapPage />} /> {/* Harta are nevoie de full-screen */}
+        <Route path="/machinery" element={<AppLayout><MachineryPage /></AppLayout>} />
+        <Route path="/inventory" element={<AppLayout><InventoryPage /></AppLayout>} />
+        
+        {/* Fallback - dacă un rol vechi este încă în localStorage, redirecționăm */}
+        <Route path="/farmer" element={<Navigate to="/manager" />} />
+        <Route path="/admin" element={<Navigate to="/super-admin" />} />
       </Routes>
     </Router>
   );

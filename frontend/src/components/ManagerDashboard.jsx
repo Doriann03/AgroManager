@@ -1,0 +1,44 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const ManagerDashboard = () => {
+    const navigate = useNavigate();
+    const user = JSON.parse(localStorage.getItem('user'));
+
+    const cardStyle = {
+        backgroundColor: 'white',
+        padding: '20px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        textAlign: 'center',
+        cursor: 'pointer',
+        transition: 'transform 0.2s',
+    };
+
+    const handleMouseOver = (e) => e.currentTarget.style.transform = 'scale(1.05)';
+    const handleMouseOut = (e) => e.currentTarget.style.transform = 'scale(1)';
+
+    return (
+        <div>
+            <h1 style={{ color: 'var(--primary-green)' }}>Panou de Control - {user?.farmName || 'Management'}</h1>
+            <p>Bun venit, {user?.username}! De aici puteți superviza operațiunile fermei.</p>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginTop: '30px' }}>
+                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => alert('Funcționalitate în dezvoltare!')}>
+                    <h2 style={{margin: 0}}>📊 Rapoarte Financiare</h2>
+                    <p>Analizați costurile și profitabilitatea.</p>
+                </div>
+                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => navigate('/map')}>
+                    <h2 style={{margin: 0}}>🗺️ Vizualizare Hartă</h2>
+                    <p>Vedeți starea parcelelor în timp real.</p>
+                </div>
+                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => alert('Funcționalitate în dezvoltare!')}>
+                    <h2 style={{margin: 0}}>🌾 Sumar Parcele</h2>
+                    <p>Metrici despre culturi și suprafețe.</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ManagerDashboard;

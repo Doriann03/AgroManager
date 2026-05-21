@@ -1,6 +1,8 @@
 package agro.backend.model;
 
 public enum UserRole {
-    ADMIN,
-    FARMER
+    SUPER_ADMIN,
+    FARM_MANAGER,
+    AGRONOMIST,
+    WORKER
 }

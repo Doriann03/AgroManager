@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, Long> {
-    List<InventoryItem> findAllByOwnerUsername(String username);
+    List<InventoryItem> findAllByFarmId(Long farmId);
 }

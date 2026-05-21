@@ -1,10 +1,13 @@
 package agro.backend.controller;
 
 import agro.backend.model.Activity;
+import agro.backend.model.User;
 import agro.backend.model.dto.ActivityRequestDTO;
+import agro.backend.repository.UserRepository;
 import agro.backend.service.ActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -16,22 +19,28 @@ import java.util.List;
 public class ActivityController {
 
     private final ActivityService activityService;
+    private final UserRepository userRepository;
 
-    // Obține toate activitățile pentru o anumită parcelă
+    private User getCurrentUser(Principal principal) {
+        if (principal == null) {
+            throw new UsernameNotFoundException("Utilizatorul nu este autentificat.");
+        }
+        return userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost găsit: " + principal.getName()));
+    }
+
     @GetMapping("/parcel/{parcelId}")
     public ResponseEntity<List<Activity>> getActivitiesForParcel(@PathVariable Long parcelId, Principal principal) {
-        if (principal == null) return ResponseEntity.status(401).build();
-        // (Opțional: verifică dacă parcela aparține user-ului curent)
+        // Aici ar trebui adăugată o verificare de securitate pentru a asigura că utilizatorul are acces la parcela respectivă
         List<Activity> activities = activityService.getActivitiesByParcelId(parcelId);
         return ResponseEntity.ok(activities);
     }
 
-    // Creează o nouă activitate
     @PostMapping
     public ResponseEntity<Activity> createActivity(@RequestBody ActivityRequestDTO activityRequest, Principal principal) {
-        if (principal == null) return ResponseEntity.status(401).build();
+        User currentUser = getCurrentUser(principal);
         try {
-            Activity savedActivity = activityService.createActivity(activityRequest, principal.getName());
+            Activity savedActivity = activityService.createActivity(activityRequest, currentUser);
             return ResponseEntity.ok(savedActivity);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();

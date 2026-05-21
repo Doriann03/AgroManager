@@ -18,37 +18,42 @@ const Login = () => {
                 password: password
             });
 
-            console.log("Raspuns backend:", response.data);
-
-            // Salvăm userul în localStorage (simplificat pentru moment)
             localStorage.setItem('user', JSON.stringify(response.data));
 
-            // Redirecționare în funcție de rol
+            // Redirecționare în funcție de noul sistem de roluri
             const role = response.data.role;
-            if (role === 'ADMIN') {
-                navigate('/admin');
-            } else if (role === 'FARMER') {
-                navigate('/farmer');
-            } else {
-                navigate('/');
+            switch (role) {
+                case 'SUPER_ADMIN':
+                    navigate('/super-admin');
+                    break;
+                case 'FARM_MANAGER':
+                    navigate('/manager');
+                    break;
+                case 'AGRONOMIST':
+                    navigate('/agronomist');
+                    break;
+                case 'WORKER':
+                    navigate('/worker');
+                    break;
+                default:
+                    navigate('/'); // Fallback
+                    break;
             }
 
-        } catch (err) { // Aici a fost corectată eroarea
+        } catch (err) {
             console.error("Eroare login:", err);
             setError('Date incorecte sau eroare de server!');
         }
     };
 
-    // Stiluri pentru containerul principal
     const loginContainerStyle = {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh', // Ocupă toată înălțimea ecranului
-        backgroundColor: '#f0f2f5' // O culoare de fundal neutră
+        height: '100vh',
+        backgroundColor: '#f0f2f5'
     };
 
-    // Stiluri pentru formular
     const formStyle = {
         padding: '40px',
         border: '1px solid #ccc',
@@ -96,7 +101,7 @@ const Login = () => {
                             onClick={() => navigate('/register')} 
                             style={{ width: '100%', padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                         >
-                            Înregistrează-te ca Fermier
+                            Înregistrează-te ca Manager
                         </button>
                     </div>
                 </form>

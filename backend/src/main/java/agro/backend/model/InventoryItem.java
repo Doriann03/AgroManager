@@ -28,8 +28,9 @@ public class InventoryItem {
 
     private Double unitPrice;
 
+    // Un produs din magazie aparține unei ferme, nu unui utilizator individual
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "farm_id", nullable = false)
     @JsonIgnore
-    private User owner;
+    private Farm farm;
 }

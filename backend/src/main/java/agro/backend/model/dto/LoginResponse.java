@@ -12,4 +12,6 @@ public class LoginResponse {
     private Long id;
     private String username;
     private UserRole role;
+    private Long farmId;
+    private String farmName;
 }

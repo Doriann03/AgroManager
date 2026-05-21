@@ -5,6 +5,7 @@ import agro.backend.model.ActivityConsumption;
 import agro.backend.model.InventoryItem;
 import agro.backend.model.Machinery;
 import agro.backend.model.Parcel;
+import agro.backend.model.User;
 import agro.backend.model.dto.ActivityRequestDTO;
 import agro.backend.model.dto.ConsumptionRequestDTO;
 import agro.backend.repository.ActivityRepository;
@@ -33,23 +34,28 @@ public class ActivityService {
         return activityRepository.findByParcelId(parcelId);
     }
 
-    @Transactional // Foarte important: folosim tranzacție pentru a asigura consistența datelor (dacă scade stocul, activitatea trebuie salvată)
-    public Activity createActivity(ActivityRequestDTO dto, String username) {
-        // Găsim parcela și verificăm apartenența
+    @Transactional
+    public Activity createActivity(ActivityRequestDTO dto, User currentUser) {
+        if (currentUser.getFarm() == null) {
+            throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
+        }
+        Long userFarmId = currentUser.getFarm().getId();
+
+        // Găsim parcela și verificăm apartenența la fermă
         Parcel parcel = parcelRepository.findById(dto.getParcelId())
                 .orElseThrow(() -> new RuntimeException("Parcela nu a fost găsită"));
         
-        if (!parcel.getOwner().getUsername().equals(username)) {
-            throw new RuntimeException("Nu sunteți proprietarul acestei parcele");
+        if (!parcel.getFarm().getId().equals(userFarmId)) {
+            throw new RuntimeException("Parcela nu aparține fermei curente.");
         }
 
-        // Găsim utilajele
+        // Găsim utilajele și verificăm apartenența la fermă
         Set<Machinery> selectedMachineries = new HashSet<>();
         if (dto.getMachineryIds() != null && !dto.getMachineryIds().isEmpty()) {
             List<Machinery> machineries = machineryRepository.findAllById(dto.getMachineryIds());
             for (Machinery m : machineries) {
-                 if (!m.getOwner().getUsername().equals(username)) {
-                     throw new RuntimeException("Un utilaj selectat nu vă aparține!");
+                 if (!m.getFarm().getId().equals(userFarmId)) {
+                     throw new RuntimeException("Un utilaj selectat nu aparține fermei curente!");
                  }
             }
             selectedMachineries.addAll(machineries);
@@ -68,18 +74,18 @@ public class ActivityService {
                 InventoryItem item = inventoryItemRepository.findById(consDto.getInventoryItemId())
                     .orElseThrow(() -> new RuntimeException("Produsul din magazie nu a fost găsit."));
                     
-                if (!item.getOwner().getUsername().equals(username)) {
-                     throw new RuntimeException("Produsul selectat nu vă aparține!");
+                if (!item.getFarm().getId().equals(userFarmId)) {
+                     throw new RuntimeException("Produsul selectat nu aparține fermei curente!");
                 }
                 
                 if (item.getQuantityAvailable() < consDto.getQuantityUsed()) {
                     throw new RuntimeException("Stoc insuficient pentru: " + item.getName() + 
-                                               ". Disponibil: " + item.getQuantityAvailable());
+                                               ". Disponibil: " + item.getQuantityAvailable() + item.getUnitOfMeasure());
                 }
                 
                 // Scădem stocul
                 item.setQuantityAvailable(item.getQuantityAvailable() - consDto.getQuantityUsed());
-                inventoryItemRepository.save(item);
+                inventoryItemRepository.save(item); // Salvăm modificarea stocului
                 
                 // Creăm înregistrarea de consum
                 ActivityConsumption consumption = new ActivityConsumption();
