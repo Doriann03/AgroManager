@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/axiosConfig';
-import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton'; // Importăm componenta BackButton
 
 const MachineryPage = () => {
     const [machineryList, setMachineryList] = useState([]);
     const [showForm, setShowForm] = useState(false);
     
-    // State pentru formular (folosit și pentru adăugare și pentru editare)
     const [formData, setFormData] = useState({ 
         id: null,
         name: '', 
@@ -19,7 +18,6 @@ const MachineryPage = () => {
     });
     
     const [error, setError] = useState('');
-    const navigate = useNavigate();
 
     const fetchMachinery = useCallback(async () => {
         try {
@@ -70,10 +68,8 @@ const MachineryPage = () => {
         
         try {
             if (formData.id) {
-                // Modificare utilaj existent
                 await apiClient.put(`/api/machinery/${formData.id}`, formData);
             } else {
-                // Adăugare utilaj nou
                 await apiClient.post('/api/machinery', formData);
             }
             resetForm();
@@ -109,12 +105,7 @@ const MachineryPage = () => {
         <div style={{ padding: '20px', maxWidth: '1200px', margin: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h1 style={{ color: 'var(--primary-green)' }}>Parcul Auto (Utilaje)</h1>
-                <button 
-                    onClick={() => navigate('/farmer')} 
-                    className="btn-secondary"
-                >
-                    &#8592; Înapoi la Dashboard
-                </button>
+                <BackButton />
             </div>
 
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>

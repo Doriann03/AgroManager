@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import apiClient from '../api/axiosConfig';
-import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton'; // Importăm componenta BackButton
 
 const InventoryPage = () => {
     const [inventory, setInventory] = useState([]);
     const [showForm, setShowForm] = useState(false);
     
-    // Modificat pentru a include id-ul produsului, ca sa stim daca facem POST sau PUT
     const [newItemId, setNewItemId] = useState(null);
     const [newItemName, setNewItemName] = useState('');
     const [newItemCategory, setNewItemCategory] = useState('FERTILIZER');
@@ -15,7 +14,6 @@ const InventoryPage = () => {
     const [newItemPrice, setNewItemPrice] = useState('');
     
     const [error, setError] = useState('');
-    const navigate = useNavigate();
 
     const fetchInventory = useCallback(async () => {
         try {
@@ -61,7 +59,7 @@ const InventoryPage = () => {
         }
 
         const itemPayload = {
-            id: newItemId, // Adaugam ID-ul in payload pentru PUT
+            id: newItemId,
             name: newItemName,
             category: newItemCategory,
             unitOfMeasure: newItemUnit,
@@ -71,10 +69,8 @@ const InventoryPage = () => {
 
         try {
             if (newItemId) {
-                // Dacă avem ID, facem PUT (Editare) - Va trebui să adăugăm endpoint-ul în backend!
                 await apiClient.put(`/api/inventory/${newItemId}`, itemPayload);
             } else {
-                // Altfel, facem POST (Creare)
                 await apiClient.post('/api/inventory', itemPayload);
             }
             
@@ -112,12 +108,7 @@ const InventoryPage = () => {
         <div style={{ padding: '20px', maxWidth: '1000px', margin: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h1 style={{ color: 'var(--primary-green)' }}>Magazia Fermei</h1>
-                <button 
-                    onClick={() => navigate('/farmer')} 
-                    className="btn-secondary"
-                >
-                    &#8592; Înapoi la Dashboard
-                </button>
+                <BackButton />
             </div>
 
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>

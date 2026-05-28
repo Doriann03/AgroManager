@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Polygon, Tooltip, LayersControl } from 'react-leaflet';
-import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton'; // Importăm componenta BackButton
 import apiClient from '../api/axiosConfig';
 import '@geoman-io/leaflet-geoman-free';
 import * as turf from '@turf/turf';
@@ -89,20 +89,19 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
     return null;
 };
 
-// Functie helper pentru culori pe baza culturii
+// ... (restul codului rămâne la fel)
 const getCropColor = (cropType, isSelected) => {
-    // Daca e selectat, il facem galben aprins sau il pastram dar mai vizibil (folosim galben in acest caz cum era inainte)
     if (isSelected) return '#ffeb3b';
     
     switch(cropType) {
-        case 'Grâu': return '#fbc02d'; // Galben grâu
-        case 'Porumb': return '#388e3c'; // Verde porumb
-        case 'Rapiță': return '#fdd835'; // Galben rapiță intens
-        case 'Floarea Soarelui': return '#ff8f00'; // Portocaliu
-        case 'Orz': return '#cddc39'; // Verde-gălbui
-        case 'Soia': return '#8d6e63'; // Maroniu-verzui
-        case 'Sfeclă': return '#d32f2f'; // Roșu sfeclă
-        default: return '#4CAF50'; // Verde default
+        case 'Grâu': return '#fbc02d';
+        case 'Porumb': return '#388e3c';
+        case 'Rapiță': return '#fdd835';
+        case 'Floarea Soarelui': return '#ff8f00';
+        case 'Orz': return '#cddc39';
+        case 'Soia': return '#8d6e63';
+        case 'Sfeclă': return '#d32f2f';
+        default: return '#4CAF50';
     }
 };
 
@@ -136,7 +135,6 @@ const MapPage = () => {
     const [newSeasonYear, setNewSeasonYear] = useState(new Date().getFullYear());
     const [newSeasonCrop, setNewSeasonCrop] = useState('Porumb');
 
-    const navigate = useNavigate();
     const mapRef = useRef(null);
     const selectedParcelIdRef = useRef(null);
 
@@ -395,13 +393,7 @@ const MapPage = () => {
     return (
         <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 64px)', overflow: 'hidden', margin: 0, padding: 0, textAlign: 'left', display: 'flex', flexGrow: 1 }}>
             
-            <button 
-                onClick={() => navigate('/farmer')} 
-                className="btn-secondary"
-                style={{ position: 'absolute', top: '20px', left: '60px', zIndex: 1002, padding: '8px 15px', display: 'flex', alignItems: 'center', gap: '5px', borderRadius: '8px', cursor: 'pointer', border: '1px solid #ccc', backgroundColor: '#fff', color: '#333', fontWeight: 'bold' }}
-            >
-                &#8592; Înapoi la Dashboard
-            </button>
+            <BackButton style={{ position: 'absolute', top: '20px', left: '60px', zIndex: 1002 }} />
 
             <MapContainer 
                 center={[45.9432, 24.9668]} 
@@ -434,7 +426,6 @@ const MapPage = () => {
                     try {
                         const coordinates = JSON.parse(parcel.coordinatesJson);
                         const isSelected = selectedParcel && selectedParcel.id === parcel.id;
-                        // Aplicăm funcția de culoare pe baza culturii
                         const parcelColor = getCropColor(parcel.cropType, isSelected);
                         
                         return (
@@ -444,7 +435,7 @@ const MapPage = () => {
                                 pathOptions={{ 
                                     color: parcelColor,
                                     weight: isSelected ? 4 : 2,
-                                    fillOpacity: isSelected ? 0.6 : 0.4 // Am marit putin opacitatea ca sa se vada mai bine culoarea culturii pe satelit
+                                    fillOpacity: isSelected ? 0.6 : 0.4
                                 }}
                                 eventHandlers={{
                                     click: () => handleParcelClick(parcel),
@@ -547,14 +538,12 @@ const MapPage = () => {
                                                 ({new Date(act.startDate).toLocaleDateString('ro-RO')})
                                             </span>
                                             
-                                            {/* Afișare utilaje folosite */}
                                             {act.machineries && act.machineries.length > 0 && (
                                                  <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
                                                      🚜 <span style={{fontWeight: '500'}}>Utilaje:</span> {act.machineries.map(m => `${m.name}`).join(', ')}
                                                  </div>
                                             )}
                                             
-                                            {/* Afișare consumuri (Substanțe/Inputuri) */}
                                             {act.consumptions && act.consumptions.length > 0 && (
                                                 <div style={{marginTop: '4px', marginLeft: '10px'}}>
                                                     🧪 <span style={{fontWeight: '500', color: '#555'}}>Consum:</span>
@@ -603,7 +592,6 @@ const MapPage = () => {
                                         ))}
                                     </select>
 
-                                    {/* --- Zona de Adăugare Consumuri --- */}
                                     <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#fff', borderRadius: '4px', border: '1px dashed #ccc' }}>
                                         <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                                             🧪 Consumabile (Erbicid, Sămânță etc.):

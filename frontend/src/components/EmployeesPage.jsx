@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/axiosConfig';
-import { useNavigate } from 'react-router-dom';
+import BackButton from './BackButton'; // Importăm componenta BackButton
 
 const EmployeesPage = () => {
     const [employees, setEmployees] = useState([]);
@@ -14,7 +14,6 @@ const EmployeesPage = () => {
     });
     
     const [error, setError] = useState('');
-    const navigate = useNavigate();
 
     const fetchEmployees = useCallback(async () => {
         try {
@@ -65,7 +64,7 @@ const EmployeesPage = () => {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h1 style={{ color: 'var(--primary-green)' }}>Managementul Echipei</h1>
-                <button onClick={() => navigate('/manager')} className="btn-secondary">&#8592; Înapoi la Panou</button>
+                <BackButton />
             </div>
 
             <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
