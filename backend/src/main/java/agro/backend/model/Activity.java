@@ -27,6 +27,14 @@ public class Activity {
 
     @ManyToMany
     @JoinTable(
+        name = "activity_workers",
+        joinColumns = @JoinColumn(name = "activity_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> assignedWorkers = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
         name = "activity_machinery", 
         joinColumns = @JoinColumn(name = "activity_id"), 
         inverseJoinColumns = @JoinColumn(name = "machinery_id") 

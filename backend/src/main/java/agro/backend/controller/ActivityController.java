@@ -29,6 +29,13 @@ public class ActivityController {
                 .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost găsit: " + principal.getName()));
     }
 
+    @GetMapping("/my-tasks")
+    public ResponseEntity<List<Activity>> getMyTasks(Principal principal) {
+        User currentUser = getCurrentUser(principal);
+        List<Activity> activities = activityService.getActivitiesByWorkerId(currentUser.getId());
+        return ResponseEntity.ok(activities);
+    }
+
     @GetMapping("/parcel/{parcelId}")
     public ResponseEntity<List<Activity>> getActivitiesForParcel(@PathVariable Long parcelId, Principal principal) {
         // Aici ar trebui adăugată o verificare de securitate pentru a asigura că utilizatorul are acces la parcela respectivă

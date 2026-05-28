@@ -30,7 +30,7 @@ public class FarmController {
     }
 
     @GetMapping("/employees")
-    @PreAuthorize("hasRole('FARM_MANAGER')")
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<List<User>> getEmployees(Principal principal) {
         User manager = getCurrentUser(principal);
         try {

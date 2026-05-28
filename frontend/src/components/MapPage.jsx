@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Polygon, Tooltip, LayersControl } from 'react-leaflet';
-import BackButton from './BackButton'; // Importăm componenta BackButton
+import BackButton from './BackButton';
 import apiClient from '../api/axiosConfig';
 import '@geoman-io/leaflet-geoman-free';
 import * as turf from '@turf/turf';
@@ -89,7 +89,6 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
     return null;
 };
 
-// ... (restul codului rămâne la fel)
 const getCropColor = (cropType, isSelected) => {
     if (isSelected) return '#ffeb3b';
     
@@ -108,22 +107,24 @@ const getCropColor = (cropType, isSelected) => {
 const MapPage = () => {
     const [parcels, setParcels] = useState([]);
     const [machineryList, setMachineryList] = useState([]); 
-    const [inventoryList, setInventoryList] = useState([]); 
-    
+    const [inventoryList, setInventoryList] = useState([]);
+    const [employees, setEmployees] = useState([]);
+
     const [showSaveForm, setShowSaveForm] = useState(false);
     const [newParcelName, setNewParcelName] = useState('');
     const [newParcelCrop, setNewParcelCrop] = useState('Grâu');
     const [calculatedArea, setCalculatedArea] = useState(0);
     const [drawnLayer, setDrawnLayer] = useState(null);
     const [error, setError] = useState('');
-    
+
     const [selectedParcel, setSelectedParcel] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    
+
     const [activities, setActivities] = useState([]);
     const [showActivityForm, setShowActivityForm] = useState(false);
     const [newActivityTitle, setNewActivityTitle] = useState('');
     const [newActivityMachineryIds, setNewActivityMachineryIds] = useState([]);
+    const [newActivityWorkerIds, setNewActivityWorkerIds] = useState([]);
     
     const [showConsumptions, setShowConsumptions] = useState(false);
     const [activityConsumptions, setActivityConsumptions] = useState([]); 
@@ -170,6 +171,15 @@ const MapPage = () => {
         }
     }, []);
 
+    const fetchEmployees = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/api/farms/employees');
+            setEmployees(response.data);
+        } catch (err) {
+            console.error("Eroare la preluarea angajatilor:", err);
+        }
+    }, []);
+
     const fetchActivitiesForParcel = async (parcelId) => {
         try {
             const response = await apiClient.get(`/api/activities/parcel/${parcelId}`);
@@ -197,7 +207,8 @@ const MapPage = () => {
             if (isMounted) {
                 await fetchParcels();
                 await fetchMachinery();
-                await fetchInventory(); 
+                await fetchInventory();
+                await fetchEmployees();
             }
         };
 
@@ -206,7 +217,7 @@ const MapPage = () => {
         return () => {
             isMounted = false;
         };
-    }, [fetchParcels, fetchMachinery, fetchInventory]);
+    }, [fetchParcels, fetchMachinery, fetchInventory, fetchEmployees]);
 
     const handleSaveNewParcel = async () => {
         if (!newParcelName || !drawnLayer) {
@@ -323,6 +334,7 @@ const MapPage = () => {
             title: newActivityTitle,
             parcelId: selectedParcel.id,
             machineryIds: newActivityMachineryIds,
+            assignedWorkerIds: newActivityWorkerIds,
             consumptions: consumptionsPayload 
         };
 
@@ -333,6 +345,7 @@ const MapPage = () => {
             
             setNewActivityTitle('');
             setNewActivityMachineryIds([]);
+            setNewActivityWorkerIds([]);
             setActivityConsumptions([]);
             setShowConsumptions(false);
             setShowActivityForm(false);
@@ -369,6 +382,13 @@ const MapPage = () => {
                                      .filter(option => option.selected)
                                      .map(option => option.value);
         setNewActivityMachineryIds(selectedOptions);
+    };
+
+    const handleWorkerSelectChange = (e) => {
+        const selectedOptions = Array.from(e.target.options)
+                                     .filter(option => option.selected)
+                                     .map(option => option.value);
+        setNewActivityWorkerIds(selectedOptions);
     };
 
     const cropOptions = ['Grâu', 'Porumb', 'Rapiță', 'Floarea Soarelui', 'Orz', 'Soia', 'Sfeclă', 'Altele'];
@@ -537,10 +557,17 @@ const MapPage = () => {
                                             <span style={{color: '#888', marginLeft: '5px'}}>
                                                 ({new Date(act.startDate).toLocaleDateString('ro-RO')})
                                             </span>
-                                            
+                                            {/* Afișare utilaje folosite */}
                                             {act.machineries && act.machineries.length > 0 && (
                                                  <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
                                                      🚜 <span style={{fontWeight: '500'}}>Utilaje:</span> {act.machineries.map(m => `${m.name}`).join(', ')}
+                                                 </div>
+                                            )}
+
+                                            {/* Afișare muncitori alocați */}
+                                            {act.assignedWorkers && act.assignedWorkers.length > 0 && (
+                                                 <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
+                                                     👥 <span style={{fontWeight: '500'}}>Muncitori:</span> {act.assignedWorkers.map(w => w.username).join(', ')}
                                                  </div>
                                             )}
                                             
@@ -589,6 +616,21 @@ const MapPage = () => {
                                     >
                                         {machineryList.map(m => (
                                             <option key={m.id} value={m.id}>{m.name} ({m.model})</option>
+                                        ))}
+                                    </select>
+
+                                    {/* Aici adăugăm selectorul pentru muncitori */}
+                                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+                                        👥 Alocați muncitori:
+                                    </label>
+                                    <select 
+                                        multiple 
+                                        value={newActivityWorkerIds} 
+                                        onChange={handleWorkerSelectChange}
+                                        style={{ width: '100%', padding: '6px', marginBottom: '15px', boxSizing: 'border-box', height: '60px', border: '1px solid #ccc', borderRadius: '4px' }}
+                                    >
+                                        {employees.filter(emp => emp.role === 'WORKER').map(w => (
+                                            <option key={w.id} value={w.id}>{w.username}</option>
                                         ))}
                                     </select>
 

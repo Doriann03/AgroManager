@@ -12,6 +12,7 @@ import agro.backend.repository.ActivityRepository;
 import agro.backend.repository.InventoryItemRepository;
 import agro.backend.repository.MachineryRepository;
 import agro.backend.repository.ParcelRepository;
+import agro.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +30,14 @@ public class ActivityService {
     private final ParcelRepository parcelRepository;
     private final MachineryRepository machineryRepository;
     private final InventoryItemRepository inventoryItemRepository;
+    private final UserRepository userRepository;
 
     public List<Activity> getActivitiesByParcelId(Long parcelId) {
         return activityRepository.findByParcelId(parcelId);
+    }
+
+    public List<Activity> getActivitiesByWorkerId(Long workerId) {
+        return activityRepository.findByAssignedWorkers_Id(workerId);
     }
 
     @Transactional
@@ -68,6 +74,18 @@ public class ActivityService {
         activity.setParcel(parcel);
         activity.setMachineries(selectedMachineries);
         
+        Set<User> assignedWorkers = new HashSet<>();
+        if (dto.getAssignedWorkerIds() != null && !dto.getAssignedWorkerIds().isEmpty()) {
+            List<User> workers = userRepository.findAllById(dto.getAssignedWorkerIds());
+            for (User w : workers) {
+                if (w.getFarm() == null || !w.getFarm().getId().equals(userFarmId)) {
+                    throw new RuntimeException("Un muncitor selectat nu aparține fermei curente!");
+                }
+            }
+            assignedWorkers.addAll(workers);
+        }
+        activity.setAssignedWorkers(assignedWorkers);
+
         // Logica pentru consumuri și stocuri
         if (dto.getConsumptions() != null && !dto.getConsumptions().isEmpty()) {
             for (ConsumptionRequestDTO consDto : dto.getConsumptions()) {

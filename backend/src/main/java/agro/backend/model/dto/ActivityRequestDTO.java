@@ -10,6 +10,7 @@ public class ActivityRequestDTO {
     private String title;
     private LocalDateTime startDate;
     private Long parcelId;
-    private List<Long> machineryIds; 
+    private List<Long> machineryIds;
+    private List<Long> assignedWorkerIds; 
     private List<ConsumptionRequestDTO> consumptions; // Lista cu stocurile consumate
 }

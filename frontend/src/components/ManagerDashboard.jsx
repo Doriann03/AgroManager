@@ -18,6 +18,11 @@ const ManagerDashboard = () => {
     const handleMouseOver = (e) => e.currentTarget.style.transform = 'scale(1.05)';
     const handleMouseOut = (e) => e.currentTarget.style.transform = 'scale(1)';
 
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        navigate('/login');
+    };
+
     return (
         <div>
             <h1 style={{ color: 'var(--primary-green)' }}>Panou de Control - {user?.farmName || 'Management'}</h1>
@@ -36,6 +41,15 @@ const ManagerDashboard = () => {
                     <h2 style={{margin: 0, color: '#9e9e9e'}}>📊 Rapoarte Financiare</h2>
                     <p style={{color: '#9e9e9e'}}>În curând.</p>
                 </div>
+            </div>
+
+            <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center' }}>
+                <button 
+                    onClick={handleLogout}
+                    style={{ padding: '15px 30px', fontSize: '18px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                >
+                    <span style={{ fontSize: '24px' }}>🚪</span> Deconectare (Înapoi la Login)
+                </button>
             </div>
         </div>
     );

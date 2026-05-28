@@ -5,6 +5,11 @@ const AgronomistDashboard = () => {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user'));
 
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        navigate('/login');
+    };
+
     const buttonStyle = {
         padding: '20px',
         fontSize: '18px',
@@ -44,6 +49,13 @@ const AgronomistDashboard = () => {
                     onClick={() => navigate('/inventory')}
                 >
                     <span style={{ fontSize: '24px' }}>📦</span> Magazia Fermei
+                </button>
+
+                <button 
+                    style={{ ...buttonStyle, backgroundColor: '#d32f2f', marginTop: '20px' }}
+                    onClick={handleLogout}
+                >
+                    <span style={{ fontSize: '24px' }}>🚪</span> Deconectare (Înapoi la Login)
                 </button>
             </div>
         </div>
