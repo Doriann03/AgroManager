@@ -5,6 +5,7 @@ import Register from './components/Register';
 import MapPage from './components/MapPage'; 
 import MachineryPage from './components/MachineryPage'; 
 import InventoryPage from './components/InventoryPage';
+import EmployeesPage from './components/EmployeesPage'; // Importăm pagina de angajați
 
 // Importăm noile dashboard-uri
 import SuperAdminDashboard from './components/SuperAdminDashboard';
@@ -36,14 +37,17 @@ function App() {
         <Route path="/super-admin" element={<AppLayout><SuperAdminDashboard /></AppLayout>} />
         <Route path="/manager" element={<AppLayout><ManagerDashboard /></AppLayout>} />
         <Route path="/agronomist" element={<AppLayout><AgronomistDashboard /></AppLayout>} />
-        <Route path="/worker" element={<WorkerDashboard />} /> {/* Worker are layout-ul propriu, full-screen */}
+        <Route path="/worker" element={<WorkerDashboard />} />
 
-        {/* Rute partajate (accesibile de mai multe roluri) */}
-        <Route path="/map" element={<MapPage />} /> {/* Harta are nevoie de full-screen */}
+        {/* Rute specifice managerului */}
+        <Route path="/manager/employees" element={<AppLayout><EmployeesPage /></AppLayout>} />
+
+        {/* Rute partajate */}
+        <Route path="/map" element={<MapPage />} />
         <Route path="/machinery" element={<AppLayout><MachineryPage /></AppLayout>} />
         <Route path="/inventory" element={<AppLayout><InventoryPage /></AppLayout>} />
         
-        {/* Fallback - dacă un rol vechi este încă în localStorage, redirecționăm */}
+        {/* Fallback */}
         <Route path="/farmer" element={<Navigate to="/manager" />} />
         <Route path="/admin" element={<Navigate to="/super-admin" />} />
       </Routes>

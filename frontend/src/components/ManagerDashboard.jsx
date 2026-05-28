@@ -24,17 +24,17 @@ const ManagerDashboard = () => {
             <p>Bun venit, {user?.username}! De aici puteți superviza operațiunile fermei.</p>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginTop: '30px' }}>
-                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => alert('Funcționalitate în dezvoltare!')}>
-                    <h2 style={{margin: 0}}>📊 Rapoarte Financiare</h2>
-                    <p>Analizați costurile și profitabilitatea.</p>
+                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => navigate('/manager/employees')}>
+                    <h2 style={{margin: 0}}>👥 Gestionează Echipa</h2>
+                    <p>Adăugați și vizualizați angajații.</p>
                 </div>
                 <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => navigate('/map')}>
                     <h2 style={{margin: 0}}>🗺️ Vizualizare Hartă</h2>
                     <p>Vedeți starea parcelelor în timp real.</p>
                 </div>
-                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => alert('Funcționalitate în dezvoltare!')}>
-                    <h2 style={{margin: 0}}>🌾 Sumar Parcele</h2>
-                    <p>Metrici despre culturi și suprafețe.</p>
+                <div style={{ backgroundColor: '#e0e0e0', ...cardStyle, cursor: 'not-allowed' }} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+                    <h2 style={{margin: 0, color: '#9e9e9e'}}>📊 Rapoarte Financiare</h2>
+                    <p style={{color: '#9e9e9e'}}>În curând.</p>
                 </div>
             </div>
         </div>
