@@ -136,6 +136,11 @@ const MapPage = () => {
     const [newSeasonYear, setNewSeasonYear] = useState(new Date().getFullYear());
     const [newSeasonCrop, setNewSeasonCrop] = useState('Porumb');
 
+    // --- State-uri pentru Weather Widget ---
+    const [weatherData, setWeatherData] = useState(null);
+    const [isLoadingWeather, setIsLoadingWeather] = useState(false);
+    const [weatherError, setWeatherError] = useState('');
+
     const mapRef = useRef(null);
     const selectedParcelIdRef = useRef(null);
 
@@ -218,6 +223,48 @@ const MapPage = () => {
             isMounted = false;
         };
     }, [fetchParcels, fetchMachinery, fetchInventory, fetchEmployees]);
+
+    // --- Efect pentru Fetch Meteo ---
+    useEffect(() => {
+        if (showActivityForm && selectedParcel) {
+            const fetchWeatherData = async () => {
+                setIsLoadingWeather(true);
+                setWeatherError('');
+                try {
+                    const coords = JSON.parse(selectedParcel.coordinatesJson);
+                    if (coords && coords.length > 0) {
+                        const lat = coords[0][0];
+                        const lng = coords[0][1];
+                        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=windspeed_10m,precipitation_probability`);
+                        if (!response.ok) {
+                            throw new Error('Eroare rețea');
+                        }
+                        const data = await response.json();
+                        setWeatherData(data);
+                    }
+                } catch (err) {
+                    console.error("Eroare preluare meteo:", err);
+                    setWeatherError('Nu s-au putut încărca datele meteo.');
+                } finally {
+                    setIsLoadingWeather(false);
+                }
+            };
+            fetchWeatherData();
+        } else {
+            setWeatherData(null);
+        }
+    }, [showActivityForm, selectedParcel]);
+
+    // --- Funcție Semafor Meteo ---
+    const getWeatherStatus = (windspeed) => {
+        if (windspeed > 20) {
+            return { color: '#d32f2f', text: 'ROȘU: Vânt puternic! Interzis erbicidare/stropire.' };
+        } else if (windspeed >= 10 && windspeed <= 20) {
+            return { color: '#fbc02d', text: 'GALBEN: Atenție la derivă, vânt moderat.' };
+        } else {
+            return { color: '#388e3c', text: 'VERDE: Condiții optime pentru tratamente.' };
+        }
+    };
 
     const handleSaveNewParcel = async () => {
         if (!newParcelName || !drawnLayer) {
@@ -557,14 +604,13 @@ const MapPage = () => {
                                             <span style={{color: '#888', marginLeft: '5px'}}>
                                                 ({new Date(act.startDate).toLocaleDateString('ro-RO')})
                                             </span>
-                                            {/* Afișare utilaje folosite */}
+                                            
                                             {act.machineries && act.machineries.length > 0 && (
                                                  <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
                                                      🚜 <span style={{fontWeight: '500'}}>Utilaje:</span> {act.machineries.map(m => `${m.name}`).join(', ')}
                                                  </div>
                                             )}
 
-                                            {/* Afișare muncitori alocați */}
                                             {act.assignedWorkers && act.assignedWorkers.length > 0 && (
                                                  <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
                                                      👥 <span style={{fontWeight: '500'}}>Muncitori:</span> {act.assignedWorkers.map(w => w.username).join(', ')}
@@ -597,6 +643,36 @@ const MapPage = () => {
                                 </button>
                             ) : (
                                 <div style={{ backgroundColor: 'var(--light-gray)', padding: '15px', borderRadius: '8px', marginTop: '10px', border: '1px solid var(--border-color)' }}>
+                                    
+                                    {/* --- WIDGET METEO --- */}
+                                    <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '8px', border: '1px solid #90caf9' }}>
+                                        <h5 style={{ margin: '0 0 10px 0', color: '#1565c0' }}>🌤️ Fereastră Optimă Tratamente</h5>
+                                        {isLoadingWeather ? (
+                                            <p style={{ fontSize: '12px', margin: 0 }}>Se încarcă datele meteo pentru această parcelă...</p>
+                                        ) : weatherError ? (
+                                            <p style={{ fontSize: '12px', color: 'red', margin: 0 }}>{weatherError}</p>
+                                        ) : weatherData && weatherData.current_weather ? (
+                                            <div>
+                                                <div style={{ display: 'flex', gap: '15px', fontSize: '13px', marginBottom: '8px', color: '#333' }}>
+                                                    <span><strong>Temp:</strong> {weatherData.current_weather.temperature}°C</span>
+                                                    <span><strong>Vânt:</strong> {weatherData.current_weather.windspeed} km/h</span>
+                                                </div>
+                                                <div style={{ 
+                                                    padding: '8px', 
+                                                    borderRadius: '4px', 
+                                                    backgroundColor: getWeatherStatus(weatherData.current_weather.windspeed).color,
+                                                    color: 'white',
+                                                    fontSize: '12px',
+                                                    fontWeight: 'bold',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    {getWeatherStatus(weatherData.current_weather.windspeed).text}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    {/* --- END WIDGET METEO --- */}
+
                                     <input 
                                         type="text" 
                                         placeholder="Ex: Arat, Erbicidat" 
@@ -619,7 +695,6 @@ const MapPage = () => {
                                         ))}
                                     </select>
 
-                                    {/* Aici adăugăm selectorul pentru muncitori */}
                                     <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
                                         👥 Alocați muncitori:
                                     </label>
