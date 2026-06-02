@@ -46,62 +46,65 @@ const Login = () => {
         }
     };
 
-    const loginContainerStyle = {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        backgroundColor: '#f0f2f5'
-    };
-
-    const formStyle = {
-        padding: '40px',
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        backgroundColor: 'white',
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        width: '350px'
-    };
-
     return (
-        <div style={loginContainerStyle}>
-            <div style={formStyle}>
-                <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Autentificare AgroManager</h2>
+        <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            minHeight: '100vh', 
+            backgroundColor: 'var(--bg-color)',
+            padding: '20px'
+        }}>
+            <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '40px', boxShadow: 'var(--box-shadow-md)' }}>
+                <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '10px' }}>🚜</div>
+                    <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Autentificare</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '5px' }}>AgroManager - Management Agricol Digital</p>
+                </div>
+
                 <form onSubmit={handleLogin}>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label>Utilizator:</label><br/>
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: 'var(--text-muted)' }}>UTILIZATOR</label>
                         <input 
                             type="text" 
+                            placeholder="Nume utilizator"
                             value={username} 
                             onChange={(e) => setUsername(e.target.value)} 
-                            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
+                            required
                         />
                     </div>
-                    <div style={{ marginBottom: '15px' }}>
-                        <label>Parola:</label><br/>
+                    <div style={{ marginBottom: '25px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '8px', color: 'var(--text-muted)' }}>PAROLĂ</label>
                         <input 
                             type="password" 
+                            placeholder="••••••••"
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
-                            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+                            style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
+                            required
                         />
                     </div>
-                    {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
-                    <button 
-                        type="submit" 
-                        style={{ width: '100%', padding: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' }}
-                    >
-                        Logare
+
+                    {error && (
+                        <div style={{ padding: '10px', backgroundColor: '#fef2f2', color: '#ef4444', borderRadius: '8px', fontSize: '13px', marginBottom: '20px', textAlign: 'center', border: '1px solid #fee2e2' }}>
+                            {error}
+                        </div>
+                    )}
+
+                    <button type="submit" className="btn-primary" style={{ width: '100%', marginBottom: '20px' }}>
+                        Intră în cont
                     </button>
                     
-                    <div style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                        <p style={{ margin: '0 0 10px 0' }}>Nu ai cont?</p>
+                    <div style={{ textAlign: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+                        <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '15px' }}>Nu aveți încă un cont?</p>
                         <button 
                             type="button" 
                             onClick={() => navigate('/register')} 
-                            style={{ width: '100%', padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                            className="btn-secondary"
+                            style={{ width: '100%' }}
                         >
-                            Înregistrează-te ca Manager
+                            Înregistrează-ți Ferma
                         </button>
                     </div>
                 </form>

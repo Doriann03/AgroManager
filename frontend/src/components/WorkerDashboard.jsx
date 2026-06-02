@@ -8,7 +8,6 @@ const WorkerDashboard = () => {
     const [tasks, setTasks] = useState([]);
 
     const [locationError, setLocationError] = useState('');
-    const [isLocating, setIsLocating] = useState(false);
     const [reportingTaskId, setReportingTaskId] = useState(null);
     const [reportData, setReportData] = useState({
         startDate: '',
@@ -36,10 +35,8 @@ const WorkerDashboard = () => {
         navigate('/login');
     };
 
-    // Logica veche de geofencing a fost eliminată
     const handleOpenReport = (task) => {
         setReportingTaskId(task.id);
-        // Formatăm data curentă pentru input-ul datetime-local
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const defaultTime = now.toISOString().slice(0, 16);
@@ -53,7 +50,6 @@ const WorkerDashboard = () => {
 
     const handleStartWork = async (task) => {
         try {
-            // Obținem data curentă locală formatată pentru ISO (fără offset/timezone-ul browserului care poate deruta)
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
             const currentStartTime = now.toISOString().slice(0, 16);
@@ -62,18 +58,12 @@ const WorkerDashboard = () => {
                 status: 'IN_PROGRESS',
                 startDate: currentStartTime 
             });
-            fetchTasks(); // Refresh tasks after update
+            fetchTasks();
         } catch (error) {
             console.error("Eroare la actualizarea statusului:", error);
             alert("A apărut o eroare la salvarea statusului.");
         }
     };
-
-    const handleCompleteWork = (taskId) => {
-        // Just an alias to open report since it's the finalization step now.
-        const task = tasks.find(t => t.id === taskId);
-        handleOpenReport(task);
-    }
 
     const handleSubmitReport = async (taskId) => {
         try {
@@ -89,77 +79,109 @@ const WorkerDashboard = () => {
         }
     };
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f0f2f5', padding: '20px', boxSizing: 'border-box' }}>
-            <div style={{ width: '100%', maxWidth: '600px', backgroundColor: 'white', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', textAlign: 'center' }}>
-                <h1 style={{ color: 'var(--primary-green)', margin: '0 0 10px 0' }}>Salut, {user?.username}!</h1>
-                <p style={{ color: '#555', marginBottom: '30px' }}>Sarcinile tale la ferma "{user?.farmName}":</p>
+    const getStatusBadge = (status) => {
+        const styles = {
+            padding: '4px 10px',
+            borderRadius: '20px',
+            fontSize: '11px',
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+        };
+        
+        if (status === 'IN_PROGRESS') {
+            return <span style={{ ...styles, backgroundColor: '#e0f2fe', color: '#0284c7' }}>În Lucru</span>;
+        }
+        return <span style={{ ...styles, backgroundColor: '#fef3c7', color: '#d97706' }}>În Așteptare</span>;
+    };
 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+    return (
+        <div style={{ backgroundColor: 'var(--bg-color)', minHeight: '100vh', padding: '20px' }}>
+            <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+                <header style={{ textAlign: 'center', marginBottom: '30px', marginTop: '20px' }}>
+                    <div style={{ fontSize: '40px', marginBottom: '10px' }}>🚜</div>
+                    <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 5px 0' }}>Salut, {user?.username}!</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Ferma "{user?.farmName}"</p>
+                    
                     <button 
                         onClick={() => navigate('/worker/history')}
-                        style={{ flex: 1, padding: '12px', backgroundColor: '#607d8b', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+                        className="btn-secondary"
+                        style={{ marginTop: '20px', width: '100%', gap: '10px', padding: '12px' }}
                     >
-                        📋 Istoric Lucrări
+                        📋 Vezi Istoric Lucrări
                     </button>
-                </div>
+                </header>
 
-                {locationError && (
-                    <div style={{ padding: '15px', backgroundColor: '#ffebee', color: '#d32f2f', border: '1px solid #ef9a9a', borderRadius: '8px', marginBottom: '20px' }}>
-                        {locationError}
-                    </div>
-                )}
+                <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '15px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    Sarcini Active <span style={{ backgroundColor: 'var(--primary-green)', color: 'white', fontSize: '12px', padding: '2px 8px', borderRadius: '10px' }}>{tasks.length}</span>
+                </h2>
 
                 {tasks.length === 0 ? (
-                    <div style={{ border: '2px dashed #ccc', padding: '40px 20px', borderRadius: '8px', color: '#888', marginBottom: '30px' }}>
-                        Nu ai nicio lucrare atribuită în acest moment.
+                    <div className="card" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                        <div style={{ fontSize: '50px', marginBottom: '20px' }}>☕</div>
+                        <h3 style={{ margin: '0 0 10px 0', color: 'var(--text-main)' }}>Nicio lucrare pentru azi</h3>
+                        <p style={{ margin: 0, fontSize: '14px' }}>Relaxează-te! Te vom anunța când primești sarcini noi.</p>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '40px' }}>
                         {tasks.map(task => (
-                            <div key={task.id} style={{ padding: '15px', border: '1px solid #ddd', borderRadius: '8px', textAlign: 'left', backgroundColor: '#fafafa' }}>
-                                <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary-green)' }}>{task.title}</h3>
-                                <p style={{ margin: '5px 0', fontSize: '14px' }}>
-                                    <strong>📍 Parcelă:</strong> {task.parcel?.name} ({task.parcel?.areaHectares?.toFixed(2)} ha)
-                                </p>
-                                <p style={{ margin: '5px 0', fontSize: '14px' }}>
-                                    <strong>📅 Data:</strong> {task.startDate ? new Date(task.startDate).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                                </p>
+                            <div key={task.id} className="card" style={{ padding: '20px', textAlign: 'left' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
+                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', flex: 1 }}>{task.title}</h3>
+                                    {getStatusBadge(task.status)}
+                                </div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                                    <div style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '16px' }}>📍</span> <strong>Parcelă:</strong> {task.parcel?.name} ({task.parcel?.areaHectares?.toFixed(2)} ha)
+                                    </div>
+                                    <div style={{ fontSize: '14px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '16px' }}>📅</span> <strong>Planificat:</strong> {task.startDate ? new Date(task.startDate).toLocaleString('ro-RO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                                    </div>
+                                </div>
 
                                 {task.status === 'PENDING' && (
                                     <button 
                                         onClick={() => handleStartWork(task)} 
-                                        style={{ marginTop: '15px', width: '100%', padding: '12px', backgroundColor: '#1976d2', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+                                        className="btn-primary"
+                                        style={{ width: '100%', padding: '14px' }}
                                     >
-                                        📍 Începe Lucrarea
+                                        🚀 Începe Lucrarea
                                     </button>
                                 )}
 
                                 {task.status === 'IN_PROGRESS' && (
                                     <button 
                                         onClick={() => handleOpenReport(task)}
-                                        style={{ marginTop: '15px', width: '100%', padding: '12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+                                        className="btn-primary"
+                                        style={{ width: '100%', padding: '14px', backgroundColor: '#0ea5e9' }}
                                     >
-                                        ✅ Finalizează Lucrarea
+                                        ✅ Finalizează și Raportează
                                     </button>
                                 )}
 
                                 {reportingTaskId === task.id && (
-                                    <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff', borderRadius: '5px', border: '1px solid #ccc' }}>
-                                        <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Raportează Lucrarea</h4>
+                                    <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                                        <h4 style={{ margin: '0 0 15px 0', fontSize: '16px' }}>Raport Lucrare</h4>
                                         
-                                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: '#555' }}>Data și ora începerii:</label>
-                                        <input type="datetime-local" value={reportData.startDate} onChange={(e) => setReportData({...reportData, startDate: e.target.value})} style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
+                                        <div style={{ marginBottom: '15px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-muted)' }}>ORA ÎNCEPERII:</label>
+                                            <input type="datetime-local" value={reportData.startDate} onChange={(e) => setReportData({...reportData, startDate: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px' }} />
+                                        </div>
 
-                                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: '#555' }}>Data și ora finalizării:</label>
-                                        <input type="datetime-local" value={reportData.endDate} onChange={(e) => setReportData({...reportData, endDate: e.target.value})} style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
+                                        <div style={{ marginBottom: '15px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-muted)' }}>ORA FINALIZĂRII:</label>
+                                            <input type="datetime-local" value={reportData.endDate} onChange={(e) => setReportData({...reportData, endDate: e.target.value})} style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px' }} />
+                                        </div>
 
-                                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px', color: '#555' }}>Comentarii (opțional):</label>
-                                        <textarea rows="3" value={reportData.comments} onChange={(e) => setReportData({...reportData, comments: e.target.value})} placeholder="Ex: A plouat scurt, am întârziat..." style={{ width: '100%', padding: '10px', marginBottom: '15px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px', resize: 'vertical' }} />
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-muted)' }}>COMENTARII (OPȚIONAL):</label>
+                                            <textarea rows="3" value={reportData.comments} onChange={(e) => setReportData({...reportData, comments: e.target.value})} placeholder="Ex: Probleme tehnice la tractor..." style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px', resize: 'vertical' }} />
+                                        </div>
 
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button onClick={() => handleSubmitReport(task.id)} style={{ flex: 1, padding: '12px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Salvează</button>
-                                            <button onClick={() => setReportingTaskId(null)} style={{ flex: 1, padding: '12px', backgroundColor: '#9e9e9e', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Anulează</button>
+                                            <button onClick={() => handleSubmitReport(task.id)} className="btn-primary" style={{ flex: 2 }}>Salvează</button>
+                                            <button onClick={() => setReportingTaskId(null)} className="btn-secondary" style={{ flex: 1 }}>Anulează</button>
                                         </div>
                                     </div>
                                 )}
@@ -168,7 +190,10 @@ const WorkerDashboard = () => {
                     </div>
                 )}
 
-                <button onClick={handleLogout} style={{ width: '100%', padding: '15px', fontSize: '16px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                <button 
+                    onClick={handleLogout}
+                    style={{ width: '100%', padding: '15px', marginTop: '20px', color: '#ef4444', backgroundColor: 'transparent', border: '1px solid #fee2e2', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}
+                >
                     Ieși din cont
                 </button>
             </div>

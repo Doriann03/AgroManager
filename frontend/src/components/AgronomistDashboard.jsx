@@ -5,58 +5,75 @@ const AgronomistDashboard = () => {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user'));
 
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        navigate('/login');
-    };
-
-    const buttonStyle = {
-        padding: '20px',
-        fontSize: '18px',
-        border: 'none',
-        borderRadius: '8px',
-        color: 'white',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-        width: '100%'
-    };
+    const menuItems = [
+        {
+            title: 'Harta Parcelelor',
+            description: 'Planificați lucrările și monitorizați culturile pe hartă.',
+            icon: '🗺️',
+            path: '/map',
+            color: '#10b981'
+        },
+        {
+            title: 'Gestiune Utilaje',
+            description: 'Verificați starea și alocarea echipamentelor.',
+            icon: '🚜',
+            path: '/machinery',
+            color: '#f59e0b'
+        },
+        {
+            title: 'Magazie Resurse',
+            description: 'Gestionați stocurile de sămânță, îngrășăminte și motorină.',
+            icon: '📦',
+            path: '/inventory',
+            color: '#6366f1'
+        }
+    ];
 
     return (
-        <div style={{ maxWidth: '800px', margin: 'auto' }}>
-            <h1 style={{ color: 'var(--primary-green)', textAlign: 'center' }}>Panou de Lucru - Agronom ({user?.farmName})</h1>
-            <p style={{ textAlign: 'center', marginBottom: '40px' }}>Gestionați lucrările agricole, utilajele și stadiul culturilor.</p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <button 
-                    style={{ ...buttonStyle, backgroundColor: '#2196F3' }}
-                    onClick={() => navigate('/map')}
-                >
-                    <span style={{ fontSize: '24px' }}>🗺️</span> Gestionează Harta Parcelelor
-                </button>
-                
-                <button 
-                    style={{ ...buttonStyle, backgroundColor: '#FFC107', color: 'black' }}
-                    onClick={() => navigate('/machinery')}
-                >
-                    <span style={{ fontSize: '24px' }}>🚜</span> Gestionează Utilaje
-                </button>
-
-                <button 
-                    style={{ ...buttonStyle, backgroundColor: '#4CAF50' }}
-                    onClick={() => navigate('/inventory')}
-                >
-                    <span style={{ fontSize: '24px' }}>📦</span> Magazia Fermei
-                </button>
-
-                <button 
-                    style={{ ...buttonStyle, backgroundColor: '#d32f2f', marginTop: '20px' }}
-                    onClick={handleLogout}
-                >
-                    <span style={{ fontSize: '24px' }}>🚪</span> Deconectare (Înapoi la Login)
-                </button>
+        <div style={{ padding: '20px' }}>
+            <header style={{ marginBottom: '40px' }}>
+                <h1 style={{ color: 'var(--primary-green)', fontSize: '32px', marginBottom: '8px' }}>
+                    Panou Agronom - {user?.farmName}
+                </h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
+                    Bun venit, <strong>{user?.username}</strong>! Gestionați activitățile și resursele fermei.
+                </p>
+            </header>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px' }}>
+                {menuItems.map((item, index) => (
+                    <div 
+                        key={index} 
+                        className="card card-interactive"
+                        onClick={() => navigate(item.path)}
+                        style={{ 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            textAlign: 'center',
+                            gap: '15px'
+                        }}
+                    >
+                        <div style={{ 
+                            fontSize: '40px', 
+                            width: '80px', 
+                            height: '80px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            backgroundColor: `${item.color}15`,
+                            borderRadius: '50%',
+                            marginBottom: '10px'
+                        }}>
+                            {item.icon}
+                        </div>
+                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '20px', fontWeight: '700' }}>{item.title}</h3>
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
+                            {item.description}
+                        </p>
+                    </div>
+                ))}
             </div>
         </div>
     );

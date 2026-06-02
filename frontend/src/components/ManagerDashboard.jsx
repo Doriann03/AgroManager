@@ -5,51 +5,91 @@ const ManagerDashboard = () => {
     const navigate = useNavigate();
     const user = JSON.parse(localStorage.getItem('user'));
 
-    const cardStyle = {
-        backgroundColor: 'white',
-        padding: '20px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        textAlign: 'center',
-        cursor: 'pointer',
-        transition: 'transform 0.2s',
-    };
-
-    const handleMouseOver = (e) => e.currentTarget.style.transform = 'scale(1.05)';
-    const handleMouseOut = (e) => e.currentTarget.style.transform = 'scale(1)';
-
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        navigate('/login');
-    };
+    const menuItems = [
+        {
+            title: 'Gestionează Echipa',
+            description: 'Adăugați și vizualizați angajații fermei.',
+            icon: '👥',
+            path: '/manager/employees',
+            color: '#3b82f6'
+        },
+        {
+            title: 'Vizualizare Hartă',
+            description: 'Urmăriți starea parcelelor și a culturilor.',
+            icon: '🗺️',
+            path: '/map',
+            color: '#10b981'
+        },
+        {
+            title: 'Utilaje și Echipamente',
+            description: 'Gestionați parcul auto și starea tehnică.',
+            icon: '🚜',
+            path: '/machinery',
+            color: '#f59e0b'
+        },
+        {
+            title: 'Magazie și Stocuri',
+            description: 'Monitorizați semințele, tratamentele și motorina.',
+            icon: '📦',
+            path: '/inventory',
+            color: '#6366f1'
+        },
+        {
+            title: 'Rapoarte Financiare',
+            description: 'Analize detaliate ale performanței și costurilor.',
+            icon: '📊',
+            path: null,
+            color: '#94a3b8',
+            disabled: true
+        }
+    ];
 
     return (
-        <div>
-            <h1 style={{ color: 'var(--primary-green)' }}>Panou de Control - {user?.farmName || 'Management'}</h1>
-            <p>Bun venit, {user?.username}! De aici puteți superviza operațiunile fermei.</p>
+        <div style={{ padding: '20px' }}>
+            <header style={{ marginBottom: '40px' }}>
+                <h1 style={{ color: 'var(--primary-green)', fontSize: '32px', marginBottom: '8px' }}>
+                    Panou de Control - {user?.farmName || 'Management'}
+                </h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
+                    Bun venit, <strong>{user?.username}</strong>! De aici puteți superviza toate operațiunile fermei.
+                </p>
+            </header>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginTop: '30px' }}>
-                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => navigate('/manager/employees')}>
-                    <h2 style={{margin: 0}}>👥 Gestionează Echipa</h2>
-                    <p>Adăugați și vizualizați angajații.</p>
-                </div>
-                <div style={cardStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} onClick={() => navigate('/map')}>
-                    <h2 style={{margin: 0}}>🗺️ Vizualizare Hartă</h2>
-                    <p>Vedeți starea parcelelor în timp real.</p>
-                </div>
-                <div style={{ backgroundColor: '#e0e0e0', ...cardStyle, cursor: 'not-allowed' }} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
-                    <h2 style={{margin: 0, color: '#9e9e9e'}}>📊 Rapoarte Financiare</h2>
-                    <p style={{color: '#9e9e9e'}}>În curând.</p>
-                </div>
-            </div>
-
-            <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'center' }}>
-                <button 
-                    onClick={handleLogout}
-                    style={{ padding: '15px 30px', fontSize: '18px', backgroundColor: '#d32f2f', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
-                >
-                    <span style={{ fontSize: '24px' }}>🚪</span> Deconectare (Înapoi la Login)
-                </button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px' }}>
+                {menuItems.map((item, index) => (
+                    <div 
+                        key={index} 
+                        className={`card card-interactive`}
+                        onClick={() => !item.disabled && navigate(item.path)}
+                        style={{ 
+                            cursor: item.disabled ? 'not-allowed' : 'pointer',
+                            opacity: item.disabled ? 0.7 : 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            textAlign: 'center',
+                            gap: '15px'
+                        }}
+                    >
+                        <div style={{ 
+                            fontSize: '40px', 
+                            width: '80px', 
+                            height: '80px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            backgroundColor: item.disabled ? '#f1f5f9' : `${item.color}15`,
+                            borderRadius: '50%',
+                            marginBottom: '10px'
+                        }}>
+                            {item.icon}
+                        </div>
+                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '20px', fontWeight: '700' }}>{item.title}</h3>
+                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
+                            {item.disabled ? 'Funcționalitate în curs de dezvoltare.' : item.description}
+                        </p>
+                    </div>
+                ))}
             </div>
         </div>
     );
