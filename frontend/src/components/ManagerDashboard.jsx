@@ -35,6 +35,13 @@ const ManagerDashboard = () => {
             color: '#6366f1'
         },
         {
+            title: 'Setări și Profil Fermă',
+            description: 'Gestionați viziunea, sediul și jurnalul strategic.',
+            icon: '⚙️',
+            path: '/manager/profile',
+            color: '#475569'
+        },
+        {
             title: 'Rapoarte Financiare',
             description: 'Analize detaliate ale performanței și costurilor.',
             icon: '📊',

@@ -14,6 +14,7 @@ import ManagerDashboard from './components/ManagerDashboard';
 import AgronomistDashboard from './components/AgronomistDashboard';
 import WorkerDashboard from './components/WorkerDashboard';
 import WorkerHistoryPage from './components/WorkerHistoryPage';
+import FarmProfilePage from './components/FarmProfilePage';
 
 import './App.css'; 
 
@@ -147,6 +148,12 @@ function App() {
         <Route path="/manager/employees" element={
           <ProtectedRoute allowedRoles={['FARM_MANAGER']}>
             <AppLayout><EmployeesPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/manager/profile" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER']}>
+            <AppLayout><FarmProfilePage /></AppLayout>
           </ProtectedRoute>
         } />
 
