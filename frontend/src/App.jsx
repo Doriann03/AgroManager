@@ -6,9 +6,9 @@ import LandingPage from './components/LandingPage';
 import MapPage from './components/MapPage'; 
 import MachineryPage from './components/MachineryPage'; 
 import InventoryPage from './components/InventoryPage';
-import EmployeesPage from './components/EmployeesPage'; // Importăm pagina de angajați
+import EmployeesPage from './components/EmployeesPage';
 
-// Importăm noile dashboard-uri
+// Import Dashboards
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import AgronomistDashboard from './components/AgronomistDashboard';
@@ -17,7 +17,7 @@ import WorkerHistoryPage from './components/WorkerHistoryPage';
 
 import './App.css'; 
 
-// Layout-ul general pentru paginile interioare, cu o lățime maximă
+// Layout general pentru utilizatori autentificati
 const AppLayout = ({ children }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -42,17 +42,17 @@ const AppLayout = ({ children }) => {
         zIndex: 100,
         boxShadow: 'var(--box-shadow-sm)'
       }}>
-        <Link to="/" style={{ fontSize: '22px', fontPoppins: '800', fontWeight: '800', color: 'var(--primary-green)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <Link to="/" style={{ fontSize: '22px', fontWeight: '800', color: 'var(--primary-green)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '28px' }}>🚜</span> AgroManager
         </Link>
         
         <nav style={{ display: 'flex', gap: '30px', alignItems: 'center', height: '100%' }}>
-          {(user?.role === 'MANAGER' || user?.role === 'AGRONOMIST') && (
+          {(user?.role === 'FARM_MANAGER' || user?.role === 'AGRONOMIST') && (
             <>
               <Link to="/map" className="nav-link">Hartă</Link>
               <Link to="/machinery" className="nav-link">Utilaje</Link>
               <Link to="/inventory" className="nav-link">Magazie</Link>
-              {user?.role === 'MANAGER' && <Link to="/manager/employees" className="nav-link">Angajați</Link>}
+              {user?.role === 'FARM_MANAGER' && <Link to="/manager/employees" className="nav-link">Angajați</Link>}
             </>
           )}
           
@@ -81,6 +81,28 @@ const AppLayout = ({ children }) => {
   );
 };
 
+// Componenta pentru protejarea rutelor pe baza de rol
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const user = JSON.parse(localStorage.getItem('user'));
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Redirectionam catre dashboard-ul specific rolului daca incearca sa acceseze ceva nepermis
+    const roleRoutes = {
+      'SUPER_ADMIN': '/super-admin',
+      'FARM_MANAGER': '/manager',
+      'AGRONOMIST': '/agronomist',
+      'WORKER': '/worker'
+    };
+    return <Navigate to={roleRoutes[user.role] || '/login'} replace />;
+  }
+
+  return children;
+};
+
 function App() {
   return (
     <Router>
@@ -91,20 +113,62 @@ function App() {
         <Route path="/register" element={<Register />} />
 
         {/* Rute pentru fiecare rol */}
-        <Route path="/super-admin" element={<AppLayout><SuperAdminDashboard /></AppLayout>} />
-        <Route path="/manager" element={<AppLayout><ManagerDashboard /></AppLayout>} />
-        <Route path="/agronomist" element={<AppLayout><AgronomistDashboard /></AppLayout>} />
-        <Route path="/worker" element={<WorkerDashboard />} />
-        <Route path="/worker/history" element={<AppLayout><WorkerHistoryPage /></AppLayout>} />
+        <Route path="/super-admin" element={
+          <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+            <AppLayout><SuperAdminDashboard /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/manager" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER']}>
+            <AppLayout><ManagerDashboard /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/agronomist" element={
+          <ProtectedRoute allowedRoles={['AGRONOMIST']}>
+            <AppLayout><AgronomistDashboard /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/worker" element={
+          <ProtectedRoute allowedRoles={['WORKER']}>
+            <WorkerDashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/worker/history" element={
+          <ProtectedRoute allowedRoles={['WORKER']}>
+            <AppLayout><WorkerHistoryPage /></AppLayout>
+          </ProtectedRoute>
+        } />
 
         {/* Rute specifice managerului */}
-        <Route path="/manager/employees" element={<AppLayout><EmployeesPage /></AppLayout>} />
+        <Route path="/manager/employees" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER']}>
+            <AppLayout><EmployeesPage /></AppLayout>
+          </ProtectedRoute>
+        } />
 
         {/* Rute partajate */}
-        <Route path="/map" element={<MapPage />} />
-        <Route path="/machinery" element={<AppLayout><MachineryPage /></AppLayout>} />
-        <Route path="/inventory" element={<AppLayout><InventoryPage /></AppLayout>} />
-        
+        <Route path="/map" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER', 'AGRONOMIST', 'SUPER_ADMIN']}>
+            <MapPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/machinery" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER', 'AGRONOMIST', 'SUPER_ADMIN']}>
+            <AppLayout><MachineryPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/inventory" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER', 'AGRONOMIST', 'SUPER_ADMIN']}>
+            <AppLayout><InventoryPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
         {/* Fallback */}
         <Route path="/farmer" element={<Navigate to="/manager" />} />
         <Route path="/admin" element={<Navigate to="/super-admin" />} />

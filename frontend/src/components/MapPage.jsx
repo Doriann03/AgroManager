@@ -6,12 +6,17 @@ import '@geoman-io/leaflet-geoman-free';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 
-const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, mapRef, selectedParcel, setSelectedParcel }) => {
+const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, mapRef, selectedParcel, setSelectedParcel, isReadOnly }) => {
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
 
         if (map.pm) {
+            if (isReadOnly) {
+                map.pm.removeControls();
+                return;
+            }
+
             map.pm.addControls({
                 position: 'topleft',
                 drawCircle: false,
@@ -114,6 +119,10 @@ const getStatusBadge = (status) => {
 };
 
 const MapPage = () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const userRole = user?.role;
+    const isManager = userRole === 'FARM_MANAGER';
+
     const [parcels, setParcels] = useState([]);
     const [machineryList, setMachineryList] = useState([]); 
     const [inventoryList, setInventoryList] = useState([]);
@@ -505,6 +514,7 @@ const MapPage = () => {
                     mapRef={mapRef}
                     selectedParcel={selectedParcel}
                     setSelectedParcel={setSelectedParcel}
+                    isReadOnly={isManager}
                 />
 
                 {parcels.map(parcel => {
@@ -525,6 +535,7 @@ const MapPage = () => {
                                 eventHandlers={{
                                     click: () => handleParcelClick(parcel),
                                     'pm:edit': (e) => {
+                                        if (isManager) return;
                                         const editedLayer = e.layer;
                                         const editedGeoJson = editedLayer.toGeoJSON();
                                         const newAreaInHectares = turf.area(editedGeoJson) / 10000;
@@ -554,7 +565,7 @@ const MapPage = () => {
                 })}
             </MapContainer>
 
-            {showSaveForm && (
+            {(showSaveForm && !isManager) && (
                 <div style={{ position: 'absolute', top: '70px', left: '60px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', width: '280px' }}>
                     <h3 style={{marginTop: 0, color: 'var(--primary-green)'}}>Tarla Nouă</h3>
                     <div style={{ marginBottom: '10px' }}>
@@ -591,6 +602,7 @@ const MapPage = () => {
                                 value={selectedParcel.name} 
                                 onChange={(e) => setSelectedParcel({...selectedParcel, name: e.target.value})}
                                 style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+                                disabled={isManager}
                             />
                         </div>
 
@@ -600,6 +612,7 @@ const MapPage = () => {
                                 value={selectedParcel.cropType} 
                                 onChange={(e) => setSelectedParcel({...selectedParcel, cropType: e.target.value})}
                                 style={{ width: '100%', padding: '8px', border: '1px solid var(--border-color)', borderRadius: '4px' }}
+                                disabled={isManager}
                             >
                                 {cropOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                             </select>
@@ -653,14 +666,16 @@ const MapPage = () => {
                                 </ul>
                             )}
 
-                            {!showActivityForm ? (
+                            {(!showActivityForm && !isManager) && (
                                 <button 
                                     onClick={() => setShowActivityForm(true)}
                                     style={{ background: 'none', border: 'none', color: 'var(--primary-green)', cursor: 'pointer', fontWeight: 'bold', padding: 0, fontSize: '14px' }}
                                 >
                                     + Adaugă lucrare
                                 </button>
-                            ) : (
+                            )}
+
+                            {showActivityForm && (
                                 <div style={{ backgroundColor: 'var(--light-gray)', padding: '15px', borderRadius: '8px', marginTop: '10px', border: '1px solid var(--border-color)' }}>
                                     
                                     {/* --- WIDGET METEO --- */}
@@ -808,14 +823,16 @@ const MapPage = () => {
                                 </ul>
                             )}
 
-                            {!showSeasonForm ? (
+                            {(!showSeasonForm && !isManager) && (
                                 <button 
                                     onClick={() => setShowSeasonForm(true)}
                                     style={{ background: 'none', border: 'none', color: '#FF9800', cursor: 'pointer', fontWeight: 'bold', padding: 0, fontSize: '14px' }}
                                 >
                                     + Adaugă an/cultură
                                 </button>
-                            ) : (
+                            )}
+
+                            {showSeasonForm && (
                                 <div style={{ backgroundColor: '#fff8e1', padding: '10px', borderRadius: '5px', marginTop: '10px', border: '1px solid #ffe082' }}>
                                     <div style={{display: 'flex', gap: '10px', marginBottom: '8px'}}>
                                         <div style={{flex: 1}}>
@@ -846,11 +863,13 @@ const MapPage = () => {
                             )}
                         </div>
 
-                        <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
-                            <button className="btn-primary" onClick={handleUpdateParcel} style={{ width: '100%', padding: '12px', fontSize: '16px' }}>
-                                Salvează Modificările Parcelei
-                            </button>
-                        </div>
+                        {!isManager && (
+                            <div style={{ marginTop: 'auto', paddingTop: '20px' }}>
+                                <button className="btn-primary" onClick={handleUpdateParcel} style={{ width: '100%', padding: '12px', fontSize: '16px' }}>
+                                    Salvează Modificările Parcelei
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
