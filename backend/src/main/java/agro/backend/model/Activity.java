@@ -21,6 +21,14 @@ public class Activity {
     private String title;
     private LocalDateTime startDate;
 
+    @Enumerated(EnumType.STRING)
+    private ActivityStatus status = ActivityStatus.PENDING;
+
+    private LocalDateTime endDate;
+
+    @Column(length = 1000)
+    private String comments;
+
     @ManyToOne
     @JoinColumn(name = "parcel_id")
     private Parcel parcel;

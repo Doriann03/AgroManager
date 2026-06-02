@@ -41,6 +41,39 @@ public class ActivityService {
     }
 
     @Transactional
+    public Activity updateActivityStatus(Long activityId, String newStatus, String startDateStr, String endDateStr, String comments, User currentUser) {
+        Activity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new RuntimeException("Activitatea nu a fost găsită."));
+                
+        // Verificăm dacă userul are voie să modifice (dacă este atribuit)
+        boolean isAssigned = activity.getAssignedWorkers().stream()
+                .anyMatch(worker -> worker.getId().equals(currentUser.getId()));
+                
+        if (!isAssigned) {
+            throw new RuntimeException("Nu aveți permisiunea de a modifica această activitate.");
+        }
+
+        try {
+            agro.backend.model.ActivityStatus status = agro.backend.model.ActivityStatus.valueOf(newStatus.toUpperCase());
+            activity.setStatus(status);
+            
+            if (startDateStr != null && !startDateStr.isEmpty()) {
+                activity.setStartDate(java.time.LocalDateTime.parse(startDateStr));
+            }
+            if (endDateStr != null && !endDateStr.isEmpty()) {
+                activity.setEndDate(java.time.LocalDateTime.parse(endDateStr));
+            }
+            if (comments != null) {
+                activity.setComments(comments);
+            }
+
+            return activityRepository.save(activity);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Status invalid: " + newStatus);
+        }
+    }
+
+    @Transactional
     public Activity createActivity(ActivityRequestDTO dto, User currentUser) {
         if (currentUser.getFarm() == null) {
             throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
@@ -70,20 +103,22 @@ public class ActivityService {
         // Creăm activitatea
         Activity activity = new Activity();
         activity.setTitle(dto.getTitle());
-        activity.setStartDate(dto.getStartDate() != null ? dto.getStartDate() : LocalDateTime.now()); 
+        activity.setStartDate(dto.getStartDate()); 
         activity.setParcel(parcel);
         activity.setMachineries(selectedMachineries);
         
         Set<User> assignedWorkers = new HashSet<>();
-        if (dto.getAssignedWorkerIds() != null && !dto.getAssignedWorkerIds().isEmpty()) {
-            List<User> workers = userRepository.findAllById(dto.getAssignedWorkerIds());
-            for (User w : workers) {
-                if (w.getFarm() == null || !w.getFarm().getId().equals(userFarmId)) {
-                    throw new RuntimeException("Un muncitor selectat nu aparține fermei curente!");
-                }
-            }
-            assignedWorkers.addAll(workers);
+        if (dto.getAssignedWorkerIds() == null || dto.getAssignedWorkerIds().isEmpty()) {
+            throw new RuntimeException("Trebuie sa selectati cel putin un muncitor pentru aceasta lucrare.");
         }
+        
+        List<User> workers = userRepository.findAllById(dto.getAssignedWorkerIds());
+        for (User w : workers) {
+            if (w.getFarm() == null || !w.getFarm().getId().equals(userFarmId)) {
+                throw new RuntimeException("Un muncitor selectat nu aparține fermei curente!");
+            }
+        }
+        assignedWorkers.addAll(workers);
         activity.setAssignedWorkers(assignedWorkers);
 
         // Logica pentru consumuri și stocuri

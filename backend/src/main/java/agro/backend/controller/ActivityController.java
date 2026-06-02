@@ -36,6 +36,25 @@ public class ActivityController {
         return ResponseEntity.ok(activities);
     }
 
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Activity> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, String> body, Principal principal) {
+        User currentUser = getCurrentUser(principal);
+        try {
+            String newStatus = body.get("status");
+            String startDate = body.get("startDate");
+            String endDate = body.get("endDate");
+            String comments = body.get("comments");
+
+            if (newStatus == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            Activity updatedActivity = activityService.updateActivityStatus(id, newStatus, startDate, endDate, comments, currentUser);
+            return ResponseEntity.ok(updatedActivity);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @GetMapping("/parcel/{parcelId}")
     public ResponseEntity<List<Activity>> getActivitiesForParcel(@PathVariable Long parcelId, Principal principal) {
         // Aici ar trebui adăugată o verificare de securitate pentru a asigura că utilizatorul are acces la parcela respectivă

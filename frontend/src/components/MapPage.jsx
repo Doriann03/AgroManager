@@ -104,6 +104,15 @@ const getCropColor = (cropType, isSelected) => {
     }
 };
 
+// --- Funcție Helper pentru Status Activitate ---
+const getStatusBadge = (status) => {
+    switch(status) {
+        case 'COMPLETED': return <span style={{backgroundColor: '#4CAF50', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', marginLeft: '8px'}}>FINALIZAT</span>;
+        case 'IN_PROGRESS': return <span style={{backgroundColor: '#FF9800', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', marginLeft: '8px'}}>ÎN LUCRU</span>;
+        default: return <span style={{backgroundColor: '#9e9e9e', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', marginLeft: '8px'}}>ÎN AȘTEPTARE</span>;
+    }
+};
+
 const MapPage = () => {
     const [parcels, setParcels] = useState([]);
     const [machineryList, setMachineryList] = useState([]); 
@@ -125,6 +134,7 @@ const MapPage = () => {
     const [newActivityTitle, setNewActivityTitle] = useState('');
     const [newActivityMachineryIds, setNewActivityMachineryIds] = useState([]);
     const [newActivityWorkerIds, setNewActivityWorkerIds] = useState([]);
+    const [newActivityStartDate, setNewActivityStartDate] = useState('');
     
     const [showConsumptions, setShowConsumptions] = useState(false);
     const [activityConsumptions, setActivityConsumptions] = useState([]); 
@@ -371,6 +381,11 @@ const MapPage = () => {
             alert("Completați titlul activității.");
             return;
         }
+
+        if (!newActivityWorkerIds || newActivityWorkerIds.length === 0) {
+            alert("Vă rugăm să selectați cel puțin un muncitor pentru această lucrare.");
+            return;
+        }
         
         const consumptionsPayload = activityConsumptions.map(c => ({
             inventoryItemId: c.inventoryItemId,
@@ -379,24 +394,27 @@ const MapPage = () => {
 
         const activityPayload = {
             title: newActivityTitle,
+            startDate: newActivityStartDate,
             parcelId: selectedParcel.id,
             machineryIds: newActivityMachineryIds,
             assignedWorkerIds: newActivityWorkerIds,
-            consumptions: consumptionsPayload 
+            consumptions: consumptionsPayload
         };
 
         try {
             await apiClient.post('/api/activities', activityPayload);
             await fetchActivitiesForParcel(selectedParcel.id);
-            await fetchInventory(); 
-            
+            await fetchInventory();
+
             setNewActivityTitle('');
+            setNewActivityStartDate('');
             setNewActivityMachineryIds([]);
             setNewActivityWorkerIds([]);
             setActivityConsumptions([]);
             setShowConsumptions(false);
             setShowActivityForm(false);
         } catch (err) {
+
              console.error("Eroare la salvarea activității:", err);
              const errorMsg = err.response?.data?.message || "Nu s-a putut salva activitatea. Verificați stocurile.";
              alert(errorMsg);
@@ -604,6 +622,7 @@ const MapPage = () => {
                                             <span style={{color: '#888', marginLeft: '5px'}}>
                                                 ({new Date(act.startDate).toLocaleDateString('ro-RO')})
                                             </span>
+                                            {getStatusBadge(act.status)}
                                             
                                             {act.machineries && act.machineries.length > 0 && (
                                                  <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
@@ -679,6 +698,16 @@ const MapPage = () => {
                                         value={newActivityTitle} 
                                         onChange={e => setNewActivityTitle(e.target.value)}
                                         style={{ width: '100%', padding: '8px', marginBottom: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
+                                    />
+
+                                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+                                        📅 Data și ora planificată:
+                                    </label>
+                                    <input 
+                                        type="datetime-local" 
+                                        value={newActivityStartDate} 
+                                        onChange={e => setNewActivityStartDate(e.target.value)}
+                                        style={{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
                                     />
                                     
                                     <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>

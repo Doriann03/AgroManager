@@ -12,6 +12,7 @@ import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import AgronomistDashboard from './components/AgronomistDashboard';
 import WorkerDashboard from './components/WorkerDashboard';
+import WorkerHistoryPage from './components/WorkerHistoryPage';
 
 import './App.css'; 
 
@@ -38,6 +39,7 @@ function App() {
         <Route path="/manager" element={<AppLayout><ManagerDashboard /></AppLayout>} />
         <Route path="/agronomist" element={<AppLayout><AgronomistDashboard /></AppLayout>} />
         <Route path="/worker" element={<WorkerDashboard />} />
+        <Route path="/worker/history" element={<AppLayout><WorkerHistoryPage /></AppLayout>} />
 
         {/* Rute specifice managerului */}
         <Route path="/manager/employees" element={<AppLayout><EmployeesPage /></AppLayout>} />
