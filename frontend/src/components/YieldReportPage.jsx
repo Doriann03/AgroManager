@@ -30,7 +30,7 @@ const YieldReportPage = () => {
 
     // Filtrăm sezoanele pentru anul selectat și mapăm cu datele parcelei
     const reportData = parcels.map(parcel => {
-        const season = seasons.find(s => s.parcelId === parcel.id && s.harvestYear === parseInt(selectedYear));
+        const season = seasons.find(s => s.parcelId === parcel.id && s.harvestYear === Number(selectedYear));
         return {
             parcelName: parcel.name,
             area: parcel.areaHectares,
@@ -60,7 +60,7 @@ const YieldReportPage = () => {
                     <label style={{ fontWeight: 'bold', color: 'var(--text-main)' }}>Selectați Anul:</label>
                     <select 
                         value={selectedYear} 
-                        onChange={(e) => setSelectedYear(e.target.value)}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
                         style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '14px', fontWeight: '600' }}
                     >
                         {availableYears.length > 0 ? (

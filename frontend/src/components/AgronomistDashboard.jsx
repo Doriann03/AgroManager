@@ -33,6 +33,13 @@ const AgronomistDashboard = () => {
             icon: '📋',
             path: '/agronomist/history',
             color: '#3b82f6'
+        },
+        {
+            title: 'Meteo și Strategie',
+            description: 'Analiză climatică și ferestre optime de lucru.',
+            icon: '🌤️',
+            path: '/weather-strategy',
+            color: '#0ea5e9'
         }
     ];
 

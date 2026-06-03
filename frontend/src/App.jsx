@@ -18,6 +18,7 @@ import WorkerDashboard from './components/WorkerDashboard';
 import WorkerHistoryPage from './components/WorkerHistoryPage';
 import FarmProfilePage from './components/FarmProfilePage';
 import YieldReportPage from './components/YieldReportPage';
+import WeatherStrategyPage from './components/WeatherStrategyPage';
 
 import './App.css'; 
 
@@ -286,6 +287,12 @@ function App() {
         <Route path="/manager/yield-report" element={
           <ProtectedRoute allowedRoles={['FARM_MANAGER', 'SUPER_ADMIN']}>
             <AppLayout><YieldReportPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/weather-strategy" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER', 'AGRONOMIST', 'SUPER_ADMIN']}>
+            <AppLayout><WeatherStrategyPage /></AppLayout>
           </ProtectedRoute>
         } />
 

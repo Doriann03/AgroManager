@@ -47,6 +47,13 @@ const ManagerDashboard = () => {
             icon: '📈',
             path: '/manager/yield-report',
             color: '#10b981'
+        },
+        {
+            title: 'Meteo și Strategie',
+            description: 'Analiză climatică avansată și recomandări de lucru.',
+            icon: '🌤️',
+            path: '/weather-strategy',
+            color: '#0ea5e9'
         }
     ];
 
