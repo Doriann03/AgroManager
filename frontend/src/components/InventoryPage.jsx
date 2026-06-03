@@ -1,19 +1,37 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import apiClient from '../api/axiosConfig';
-import BackButton from './BackButton'; // Importăm componenta BackButton
+import BackButton from './BackButton';
 
 const InventoryPage = () => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    const isManager = user?.role === 'FARM_MANAGER';
+    const isAgronomist = user?.role === 'AGRONOMIST';
+
+    const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' sau 'requests'
+    
+    // State-uri Inventar
     const [inventory, setInventory] = useState([]);
     const [showForm, setShowForm] = useState(false);
-    
     const [newItemId, setNewItemId] = useState(null);
     const [newItemName, setNewItemName] = useState('');
     const [newItemCategory, setNewItemCategory] = useState('FERTILIZER');
     const [newItemUnit, setNewItemUnit] = useState('L');
     const [newItemQuantity, setNewItemQuantity] = useState('');
     const [newItemPrice, setNewItemPrice] = useState('');
-    
+
+    // State-uri Cereri
+    const [requests, setRequests] = useState([]);
+    const [showRequestForm, setShowRequestForm] = useState(false);
+    const [newRequest, setNewRequest] = useState({ 
+        itemName: '', 
+        itemCategory: 'FERTILIZER', 
+        quantityRequested: '', 
+        unitOfMeasure: 'L', 
+        priority: 'MEDIUM' 
+    });
+
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const fetchInventory = useCallback(async () => {
         try {
@@ -21,15 +39,25 @@ const InventoryPage = () => {
             setInventory(response.data);
         } catch (err) {
             console.error("Eroare la preluarea magaziei:", err);
-            setError("Nu s-au putut încărca stocurile.");
+        }
+    }, []);
+
+    const fetchRequests = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/api/inventory-requests');
+            setRequests(response.data);
+        } catch (err) {
+            console.error("Eroare la preluarea cererilor:", err);
         }
     }, []);
 
     useEffect(() => {
         fetchInventory();
-    }, [fetchInventory]);
+        fetchRequests();
+    }, [fetchInventory, fetchRequests]);
 
-    const resetForm = () => {
+    // --- LOGICA INVENTAR ---
+    const resetInventoryForm = () => {
         setNewItemId(null);
         setNewItemName('');
         setNewItemCategory('FERTILIZER');
@@ -40,179 +68,252 @@ const InventoryPage = () => {
         setError('');
     };
 
-    const handleEditItem = (item) => {
-        setNewItemId(item.id);
-        setNewItemName(item.name);
-        setNewItemCategory(item.category);
-        setNewItemUnit(item.unitOfMeasure);
-        setNewItemQuantity(item.quantityAvailable);
-        setNewItemPrice(item.unitPrice || '');
-        setShowForm(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
     const handleSaveItem = async (e) => {
         e.preventDefault();
-        if (!newItemName || !newItemQuantity || !newItemUnit) {
-            setError("Numele, unitatea și cantitatea sunt obligatorii!");
-            return;
-        }
-
-        const itemPayload = {
-            id: newItemId,
-            name: newItemName,
-            category: newItemCategory,
-            unitOfMeasure: newItemUnit,
-            quantityAvailable: parseFloat(newItemQuantity),
+        const payload = {
+            id: newItemId, name: newItemName, category: newItemCategory,
+            unitOfMeasure: newItemUnit, quantityAvailable: parseFloat(newItemQuantity),
             unitPrice: newItemPrice ? parseFloat(newItemPrice) : 0
         };
-
         try {
-            if (newItemId) {
-                await apiClient.put(`/api/inventory/${newItemId}`, itemPayload);
-            } else {
-                await apiClient.post('/api/inventory', itemPayload);
-            }
-            
-            await fetchInventory();
-            resetForm();
+            if (newItemId) await apiClient.put(`/api/inventory/${newItemId}`, payload);
+            else await apiClient.post('/api/inventory', payload);
+            fetchInventory();
+            resetInventoryForm();
         } catch (err) {
-            console.error("Eroare la salvarea produsului:", err);
-            setError("Nu s-a putut salva produsul.");
+            setError("Eroare la salvarea produsului.");
         }
     };
 
     const handleDeleteItem = async (id) => {
-        if(window.confirm("Sigur dorești să ștergi acest produs din magazie?")) {
+        if(window.confirm("Ștergi acest produs?")) {
             try {
                 await apiClient.delete(`/api/inventory/${id}`);
-                await fetchInventory();
-            } catch (err) {
-                console.error("Eroare la stergere:", err);
-                alert("Produsul nu a putut fi șters. Poate este deja folosit în activități trecute.");
-            }
+                fetchInventory();
+            } catch (err) { alert("Nu s-a putut șterge."); }
         }
     };
 
-    const getCategoryDetails = (cat) => {
-        switch(cat) {
-            case 'SEED': return { icon: '🌱', label: 'Sămânță' };
-            case 'FERTILIZER': return { icon: '🧪', label: 'Îngrășământ' };
-            case 'PESTICIDE': return { icon: '☠️', label: 'Pesticid' };
-            case 'FUEL': return { icon: '⛽', label: 'Combustibil' };
-            default: return { icon: '📦', label: 'Altele' };
+    // --- LOGICA CERERI ---
+    const handleCreateRequest = async (e) => {
+        e.preventDefault();
+        try {
+            await apiClient.post('/api/inventory-requests', newRequest);
+            fetchRequests();
+            setNewRequest({ itemName: '', quantityRequested: '', unitOfMeasure: 'L', priority: 'MEDIUM' });
+            setShowRequestForm(false);
+            alert("Cererea a fost trimisă managerului!");
+        } catch (err) { alert("Eroare la trimiterea cererii."); }
+    };
+
+    const handleUpdateStatus = async (id, status) => {
+        try {
+            await apiClient.put(`/api/inventory-requests/${id}/status`, { status });
+            fetchRequests();
+        } catch (err) { alert("Eroare la actualizarea statusului."); }
+    };
+
+    const getStatusStyle = (status) => {
+        switch(status) {
+            case 'APPROVED': return { color: '#16a34a', fontWeight: 'bold' };
+            case 'REJECTED': return { color: '#dc2626', fontWeight: 'bold' };
+            default: return { color: '#d97706', fontWeight: 'bold' };
+        }
+    };
+
+    const getPriorityStyle = (prio) => {
+        switch(prio) {
+            case 'HIGH': return { backgroundColor: '#fee2e2', color: '#991b1b' };
+            case 'LOW': return { backgroundColor: '#f0fdf4', color: '#166534' };
+            default: return { backgroundColor: '#fef3c7', color: '#92400e' };
         }
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1000px', margin: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1 style={{ color: 'var(--primary-green)' }}>Magazia Fermei</h1>
+        <div style={{ padding: '20px', maxWidth: '1100px', margin: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div>
+                    <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>Gestiune Resurse</h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '5px 0 0 0' }}>Magazie, stocuri și cereri de aprovizionare.</p>
+                </div>
                 <BackButton />
             </div>
 
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                    <h3 style={{ margin: 0 }}>Stocuri Curente ({inventory.length})</h3>
-                    {!showForm && (
-                        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Adaugă Produs Nou</button>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+                <button 
+                    onClick={() => setActiveTab('inventory')}
+                    style={{ 
+                        padding: '10px 20px', border: 'none', background: activeTab === 'inventory' ? 'var(--primary-green)' : 'transparent',
+                        color: activeTab === 'inventory' ? 'white' : 'var(--text-main)', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                    }}
+                >📦 Stocuri Magazie</button>
+                <button 
+                    onClick={() => setActiveTab('requests')}
+                    style={{ 
+                        padding: '10px 20px', border: 'none', background: activeTab === 'requests' ? 'var(--primary-green)' : 'transparent',
+                        color: activeTab === 'requests' ? 'white' : 'var(--text-main)', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold'
+                    }}
+                >📝 Cereri Aprovizionare</button>
+            </div>
+
+            {activeTab === 'inventory' ? (
+                <div className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h3 style={{ margin: 0 }}>Stocuri Curente</h3>
+                        {isManager && !showForm && (
+                            <button className="btn-primary" onClick={() => setShowForm(true)}>+ Adaugă Produs</button>
+                        )}
+                    </div>
+
+                    {showForm && (
+                        <form onSubmit={handleSaveItem} style={{ backgroundColor: '#f8fafc', padding: '20px', borderRadius: '10px', marginBottom: '20px', border: '1px solid var(--border-color)' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>NUME PRODUS</label>
+                                    <input type="text" value={newItemName} onChange={e => setNewItemName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>CATEGORIE</label>
+                                    <select value={newItemCategory} onChange={e => setNewItemCategory(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                        <option value="FERTILIZER">Îngrășământ</option>
+                                        <option value="PESTICIDE">Pesticid</option>
+                                        <option value="SEED">Sămânță</option>
+                                        <option value="FUEL">Combustibil</option>
+                                        <option value="OTHER">Altele</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>CANTITATE</label>
+                                    <input type="number" value={newItemQuantity} onChange={e => setNewItemQuantity(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: 'bold' }}>UNITATE</label>
+                                    <select value={newItemUnit} onChange={e => setNewItemUnit(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                        <option value="L">Litri (L)</option>
+                                        <option value="Kg">Kilograme (Kg)</option>
+                                        <option value="Tone">Tone</option>
+                                        <option value="Buc">Bucăți</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button type="submit" className="btn-primary">Salvează</button>
+                                <button type="button" className="btn-secondary" onClick={resetInventoryForm}>Anulează</button>
+                            </div>
+                        </form>
                     )}
-                </div>
 
-                {showForm && (
-                    <form onSubmit={handleSaveItem} style={{ backgroundColor: 'var(--light-gray)', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--border-color)' }}>
-                        <h4 style={{marginTop: 0, color: 'var(--primary-green)'}}>{newItemId ? 'Modifică Produs' : 'Intrare Nouă în Magazie'}</h4>
-                        {error && <p style={{ color: 'red' }}>{error}</p>}
-                        
-                        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '15px' }}>
-                            <div style={{ flex: '1 1 200px' }}>
-                                <label>Nume Produs (Ex: Uree 46%):</label>
-                                <input type="text" value={newItemName} onChange={e => setNewItemName(e.target.value)} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} required />
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label>Categorie:</label>
-                                <select value={newItemCategory} onChange={e => setNewItemCategory(e.target.value)} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
-                                    <option value="FERTILIZER">Îngrășământ</option>
-                                    <option value="PESTICIDE">Pesticid</option>
-                                    <option value="SEED">Sămânță</option>
-                                    <option value="FUEL">Combustibil</option>
-                                    <option value="OTHER">Altele</option>
-                                </select>
-                            </div>
-                            <div style={{ flex: '1 1 100px' }}>
-                                <label>Cantitate:</label>
-                                <input type="number" step="0.01" value={newItemQuantity} onChange={e => setNewItemQuantity(e.target.value)} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} required />
-                            </div>
-                            <div style={{ flex: '1 1 80px' }}>
-                                <label>Unitate Măsură:</label>
-                                <select value={newItemUnit} onChange={e => setNewItemUnit(e.target.value)} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
-                                    <option value="L">Litri (L)</option>
-                                    <option value="Kg">Kilograme (Kg)</option>
-                                    <option value="Tone">Tone</option>
-                                    <option value="Buc">Bucăți</option>
-                                </select>
-                            </div>
-                            <div style={{ flex: '1 1 120px' }}>
-                                <label>Preț per unitate (RON):</label>
-                                <input type="number" step="0.01" value={newItemPrice} onChange={e => setNewItemPrice(e.target.value)} placeholder="Opțional" style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
-                            </div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button type="submit" className="btn-primary" style={{ padding: '10px 20px' }}>{newItemId ? 'Salvează Modificările' : 'Salvează în Magazie'}</button>
-                            <button type="button" className="btn-secondary" onClick={resetForm} style={{ padding: '10px 20px' }}>Anulează</button>
-                        </div>
-                    </form>
-                )}
-
-                {inventory.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>Magazia este goală. Adaugă un produs pentru a-l putea folosi în lucrările agricole.</p>
-                ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr style={{ backgroundColor: 'var(--primary-green)', color: 'white', textAlign: 'left' }}>
-                                <th style={{ padding: '12px', borderRadius: '4px 0 0 0' }}>Categorie</th>
-                                <th style={{ padding: '12px' }}>Nume Produs</th>
-                                <th style={{ padding: '12px' }}>Stoc Disponibil</th>
-                                <th style={{ padding: '12px' }}>Preț/Unitate</th>
-                                <th style={{ padding: '12px', borderRadius: '0 4px 0 0', textAlign: 'center' }}>Acțiuni</th>
+                            <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                                <th style={{ padding: '12px 10px' }}>Produs</th>
+                                <th style={{ padding: '12px 10px' }}>Categorie</th>
+                                <th style={{ padding: '12px 10px' }}>Stoc</th>
+                                {isManager && <th style={{ padding: '12px 10px', textAlign: 'right' }}>Acțiuni</th>}
                             </tr>
                         </thead>
                         <tbody>
-                            {inventory.map((item, index) => {
-                                const catDetails = getCategoryDetails(item.category);
-                                const isLowStock = item.quantityAvailable < 10; 
-                                
-                                return (
-                                    <tr key={item.id} style={{ borderBottom: '1px solid #eee', backgroundColor: index % 2 === 0 ? '#fafafa' : '#fff' }}>
-                                        <td style={{ padding: '12px' }}>{catDetails.icon} {catDetails.label}</td>
-                                        <td style={{ padding: '12px', fontWeight: 'bold' }}>{item.name}</td>
-                                        <td style={{ padding: '12px', color: isLowStock ? '#d32f2f' : 'inherit', fontWeight: isLowStock ? 'bold' : 'normal' }}>
-                                            {item.quantityAvailable} {item.unitOfMeasure}
-                                            {isLowStock && <span style={{fontSize: '12px', marginLeft: '5px'}}> (Stoc redus!)</span>}
+                            {inventory.map(item => (
+                                <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '15px 10px', fontWeight: '700' }}>{item.name}</td>
+                                    <td style={{ padding: '15px 10px' }}>{item.category}</td>
+                                    <td style={{ padding: '15px 10px' }}>{item.quantityAvailable} {item.unitOfMeasure}</td>
+                                    {isManager && (
+                                        <td style={{ padding: '15px 10px', textAlign: 'right' }}>
+                                            <button onClick={() => { setNewItemId(item.id); setNewItemName(item.name); setNewItemQuantity(item.quantityAvailable); setShowForm(true); }} style={{ marginRight: '10px', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}>✏️</button>
+                                            <button onClick={() => handleDeleteItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>🗑️</button>
                                         </td>
-                                        <td style={{ padding: '12px' }}>{item.unitPrice ? `${item.unitPrice} RON` : '-'}</td>
-                                        <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                            <button 
-                                                onClick={() => handleEditItem(item)}
-                                                style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '5px' }}
-                                            >
-                                                Editează
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDeleteItem(item.id)}
-                                                style={{ backgroundColor: '#ff4444', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                                            >
-                                                Șterge
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                    )}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
-                )}
-            </div>
+                </div>
+            ) : (
+                <div className="card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h3 style={{ margin: 0 }}>Cereri Aprovizionare</h3>
+                        {isAgronomist && !showRequestForm && (
+                            <button className="btn-primary" onClick={() => setShowRequestForm(true)}>+ Cerere Nouă</button>
+                        )}
+                    </div>
+
+                    {showRequestForm && (
+                        <form onSubmit={handleCreateRequest} style={{ backgroundColor: '#f0f9ff', padding: '20px', borderRadius: '10px', marginBottom: '20px', border: '1px solid #bae6fd' }}>
+                            <h4 style={{ margin: '0 0 15px 0', color: '#0369a1' }}>Trimite cerere către manager</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 'bold' }}>CE AVEM NEVOIE?</label>
+                                    <input type="text" placeholder="Ex: Azotat, Semințe porumb..." value={newRequest.itemName} onChange={e => setNewRequest({...newRequest, itemName: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 'bold' }}>CATEGORIE</label>
+                                    <select value={newRequest.itemCategory} onChange={e => setNewRequest({...newRequest, itemCategory: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                        <option value="FERTILIZER">Îngrășământ</option>
+                                        <option value="PESTICIDE">Pesticid</option>
+                                        <option value="SEED">Sămânță</option>
+                                        <option value="FUEL">Combustibil</option>
+                                        <option value="OTHER">Altele</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 'bold' }}>CANTITATE</label>
+                                    <input type="number" value={newRequest.quantityRequested} onChange={e => setNewRequest({...newRequest, quantityRequested: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 'bold' }}>UNITATE</label>
+                                    <select value={newRequest.unitOfMeasure} onChange={e => setNewRequest({...newRequest, unitOfMeasure: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                        <option value="L">Litri (L)</option>
+                                        <option value="Kg">Kilograme (Kg)</option>
+                                        <option value="Tone">Tone</option>
+                                        <option value="Buc">Bucăți</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 'bold' }}>PRIORITATE</label>
+                                    <select value={newRequest.priority} onChange={e => setNewRequest({...newRequest, priority: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                        <option value="LOW">Scăzută</option>
+                                        <option value="MEDIUM">Medie</option>
+                                        <option value="HIGH">Urgentă</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button type="submit" className="btn-primary" style={{ backgroundColor: '#0284c7' }}>Trimite Cererea</button>
+                                <button type="button" className="btn-secondary" onClick={() => setShowRequestForm(false)}>Anulează</button>
+                            </div>
+                        </form>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        {requests.length === 0 ? <p style={{ textAlign: 'center', color: '#94a3b8' }}>Nu există cereri înregistrate.</p> : 
+                        requests.map(req => (
+                            <div key={req.id} style={{ padding: '15px', border: '1px solid #e2e8f0', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <strong style={{ fontSize: '16px' }}>{req.itemName}</strong>
+                                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '10px', ...getPriorityStyle(req.priority) }}>{req.priority}</span>
+                                    </div>
+                                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
+                                        Cantitate: {req.quantityRequested} {req.unitOfMeasure} | Categorie: {req.itemCategory} | Solicitat de: <strong>{req.requester?.username}</strong>
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{new Date(req.dateCreated).toLocaleDateString('ro-RO')}</div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={getStatusStyle(req.status)}>{req.status}</div>
+                                    {isManager && req.status === 'PENDING' && (
+                                        <div style={{ marginTop: '10px', display: 'flex', gap: '5px' }}>
+                                            <button onClick={() => handleUpdateStatus(req.id, 'APPROVED')} style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', backgroundColor: '#16a34a', color: 'white', cursor: 'pointer', fontSize: '12px' }}>Aprobă</button>
+                                            <button onClick={() => handleUpdateStatus(req.id, 'REJECTED')} style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', backgroundColor: '#dc2626', color: 'white', cursor: 'pointer', fontSize: '12px' }}>Respinge</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
