@@ -42,12 +42,11 @@ const ManagerDashboard = () => {
             color: '#475569'
         },
         {
-            title: 'Rapoarte Financiare',
-            description: 'Analize detaliate ale performanței și costurilor.',
-            icon: '📊',
-            path: null,
-            color: '#94a3b8',
-            disabled: true
+            title: 'Producție și Recolte',
+            description: 'Analizați performanța fiecărei parcele pe ani.',
+            icon: '📈',
+            path: '/manager/yield-report',
+            color: '#10b981'
         }
     ];
 

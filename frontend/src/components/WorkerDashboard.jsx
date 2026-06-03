@@ -12,8 +12,18 @@ const WorkerDashboard = () => {
     const [reportData, setReportData] = useState({
         startDate: '',
         endDate: '',
-        comments: ''
+        comments: '',
+        harvestedYieldKg: ''
     });
+
+    const activityTypeLabels = {
+        'ARAT': '🚜 Arat',
+        'SEMANAT': '🌱 Semănat',
+        'RECOLTAT': '🌾 Recoltat',
+        'IRIGAT': '💧 Irigat',
+        'TRATAMENT': '🧪 Tratament',
+        'ALTELE': '📋 Altele'
+    };
 
     const fetchTasks = useCallback(async () => {
         try {
@@ -44,7 +54,8 @@ const WorkerDashboard = () => {
         setReportData({
             startDate: task.startDate ? task.startDate.slice(0, 16) : defaultTime,
             endDate: defaultTime,
-            comments: ''
+            comments: '',
+            harvestedYieldKg: ''
         });
     };
 
@@ -127,7 +138,10 @@ const WorkerDashboard = () => {
                         {tasks.map(task => (
                             <div key={task.id} className="card" style={{ padding: '20px', textAlign: 'left' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', flex: 1 }}>{task.title}</h3>
+                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', flex: 1 }}>
+                                        {activityTypeLabels[task.type] || task.type}
+                                        {task.title && <span style={{ fontWeight: '400', fontSize: '14px', color: '#666', display: 'block' }}>{task.title}</span>}
+                                    </h3>
                                     {getStatusBadge(task.status)}
                                 </div>
                                 
@@ -179,8 +193,29 @@ const WorkerDashboard = () => {
                                             <textarea rows="3" value={reportData.comments} onChange={(e) => setReportData({...reportData, comments: e.target.value})} placeholder="Ex: Probleme tehnice la tractor..." style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px', resize: 'vertical' }} />
                                         </div>
 
+                                        {tasks.find(t => t.id === reportingTaskId)?.type === 'RECOLTAT' && (
+                                            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#fff7ed', borderRadius: '8px', border: '1px solid #ffedd5' }}>
+                                                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: '#9a3412' }}>CANTITATE RECOLTATĂ (KG) *</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={reportData.harvestedYieldKg} 
+                                                    onChange={(e) => setReportData({...reportData, harvestedYieldKg: e.target.value})} 
+                                                    placeholder="Introduceți kilogramele recoltate"
+                                                    style={{ width: '100%', padding: '12px', border: '2px solid #fdba74', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold' }} 
+                                                    required
+                                                />
+                                            </div>
+                                        )}
+
                                         <div style={{ display: 'flex', gap: '10px' }}>
-                                            <button onClick={() => handleSubmitReport(task.id)} className="btn-primary" style={{ flex: 2 }}>Salvează</button>
+                                            <button onClick={() => {
+                                                const task = tasks.find(t => t.id === reportingTaskId);
+                                                if (task?.type === 'RECOLTAT' && !reportData.harvestedYieldKg) {
+                                                    alert("Vă rugăm să introduceți cantitatea recoltată!");
+                                                    return;
+                                                }
+                                                handleSubmitReport(task.id);
+                                            }} className="btn-primary" style={{ flex: 2 }}>Salvează</button>
                                             <button onClick={() => setReportingTaskId(null)} className="btn-secondary" style={{ flex: 1 }}>Anulează</button>
                                         </div>
                                     </div>

@@ -141,6 +141,7 @@ const MapPage = () => {
     const [activities, setActivities] = useState([]);
     const [showActivityForm, setShowActivityForm] = useState(false);
     const [newActivityTitle, setNewActivityTitle] = useState('');
+    const [newActivityType, setNewActivityType] = useState('ALTELE');
     const [newActivityMachineryIds, setNewActivityMachineryIds] = useState([]);
     const [newActivityWorkerIds, setNewActivityWorkerIds] = useState([]);
     const [newActivityStartDate, setNewActivityStartDate] = useState('');
@@ -154,6 +155,12 @@ const MapPage = () => {
     const [showSeasonForm, setShowSeasonForm] = useState(false);
     const [newSeasonYear, setNewSeasonYear] = useState(new Date().getFullYear());
     const [newSeasonCrop, setNewSeasonCrop] = useState('Porumb');
+    
+    // State-uri pentru Editare Recolta
+    const [editingSeasonId, setEditingSeasonId] = useState(null);
+    const [editingYieldValue, setEditingYieldValue] = useState('');
+
+    const [selectedActivityYear, setSelectedActivityYear] = useState(new Date().getFullYear());
 
     // --- State-uri pentru Weather Widget ---
     const [weatherData, setWeatherData] = useState(null);
@@ -403,6 +410,7 @@ const MapPage = () => {
 
         const activityPayload = {
             title: newActivityTitle,
+            type: newActivityType,
             startDate: newActivityStartDate,
             parcelId: selectedParcel.id,
             machineryIds: newActivityMachineryIds,
@@ -416,6 +424,7 @@ const MapPage = () => {
             await fetchInventory();
 
             setNewActivityTitle('');
+            setNewActivityType('ALTELE');
             setNewActivityStartDate('');
             setNewActivityMachineryIds([]);
             setNewActivityWorkerIds([]);
@@ -451,6 +460,27 @@ const MapPage = () => {
         }
     };
 
+    const handleUpdateYield = async (seasonId) => {
+        if (!editingYieldValue || !selectedParcel) return;
+
+        try {
+            await apiClient.put(`/api/crop-seasons/${seasonId}`, {
+                totalYieldKg: parseFloat(editingYieldValue)
+            });
+            await fetchCropSeasonsForParcel(selectedParcel.id);
+            setEditingSeasonId(null);
+            setEditingYieldValue('');
+        } catch (err) {
+            console.error("Eroare la actualizarea recoltei:", err);
+            alert("Nu s-a putut salva recolta.");
+        }
+    };
+
+    const startEditingYield = (season) => {
+        setEditingSeasonId(season.id);
+        setEditingYieldValue(season.totalYieldKg || '');
+    };
+
     const handleMachinerySelectChange = (e) => {
         const selectedOptions = Array.from(e.target.options)
                                      .filter(option => option.selected)
@@ -467,11 +497,20 @@ const MapPage = () => {
 
     const cropOptions = ['Grâu', 'Porumb', 'Rapiță', 'Floarea Soarelui', 'Orz', 'Soia', 'Sfeclă', 'Altele'];
 
+    const activityTypeLabels = {
+        'ARAT': '🚜 Arat',
+        'SEMANAT': '🌱 Semănat',
+        'RECOLTAT': '🌾 Recoltat',
+        'IRIGAT': '💧 Irigat',
+        'TRATAMENT': '🧪 Tratament',
+        'ALTELE': '📋 Altele'
+    };
+
     const sidebarStyle = {
         position: 'absolute',
         top: '0',
-        right: isSidebarOpen ? '0' : '-450px',
-        width: '400px',
+        right: isSidebarOpen ? '0' : '-550px',
+        width: '500px',
         height: '100%',
         backgroundColor: 'var(--white-color)',
         boxShadow: '-2px 0 10px rgba(0,0,0,0.1)',
@@ -623,20 +662,44 @@ const MapPage = () => {
                         </div>
 
                         <div style={{ marginBottom: '10px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                            <h4 style={{ margin: '0 0 10px 0' }}>Jurnal Activități</h4>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <h4 style={{ margin: 0 }}>Jurnal Activități</h4>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>Anul:</label>
+                                    <select 
+                                        value={selectedActivityYear} 
+                                        onChange={(e) => setSelectedActivityYear(parseInt(e.target.value))}
+                                        style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-color)', fontSize: '13px' }}
+                                    >
+                                        {[2024, 2025, 2026, 2027].map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
                             
-                            {activities.length === 0 ? (
-                                <p style={{fontSize: '13px', color: '#888', fontStyle: 'italic'}}>Nu există activități înregistrate.</p>
+                            {activities.filter(act => new Date(act.startDate).getFullYear() === selectedActivityYear).length === 0 ? (
+                                <p style={{fontSize: '13px', color: '#888', fontStyle: 'italic'}}>Nu există activități înregistrate pentru anul {selectedActivityYear}.</p>
                             ) : (
                                 <ul style={{ paddingLeft: '20px', fontSize: '13px', color: '#444', marginBottom: '15px' }}>
-                                    {activities.map((act) => (
+                                    {activities
+                                        .filter(act => new Date(act.startDate).getFullYear() === selectedActivityYear)
+                                        .map((act) => (
                                         <li key={act.id} style={{marginBottom: '15px', paddingBottom: '10px', borderBottom: '1px dashed #eee'}}>
-                                            <strong style={{fontSize: '14px'}}>{act.title}</strong> 
+                                            <strong style={{fontSize: '14px'}}>
+                                                {activityTypeLabels[act.type] || act.type}
+                                                {act.title && <span style={{fontWeight: 'normal', color: '#666'}}> - {act.title}</span>}
+                                            </strong>
                                             <span style={{color: '#888', marginLeft: '5px'}}>
                                                 ({new Date(act.startDate).toLocaleDateString('ro-RO')})
                                             </span>
                                             {getStatusBadge(act.status)}
-                                            
+
+                                            {act.harvestedYieldKg > 0 && (
+                                                <div style={{color: 'var(--primary-green)', fontWeight: 'bold', marginTop: '4px', marginLeft: '10px', fontSize: '12px'}}>
+                                                    ⚖️ Recoltă: {act.harvestedYieldKg.toLocaleString('ro-RO')} kg
+                                                </div>
+                                            )}
                                             {act.machineries && act.machineries.length > 0 && (
                                                  <div style={{color: '#555', marginTop: '4px', marginLeft: '10px'}}>
                                                      🚜 <span style={{fontWeight: '500'}}>Utilaje:</span> {act.machineries.map(m => `${m.name}`).join(', ')}
@@ -707,9 +770,22 @@ const MapPage = () => {
                                     </div>
                                     {/* --- END WIDGET METEO --- */}
 
+                                    <label style={{ fontSize: '12px', color: '#555', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>
+                                        Tip Activitate:
+                                    </label>
+                                    <select 
+                                        value={newActivityType} 
+                                        onChange={e => setNewActivityType(e.target.value)}
+                                        style={{ width: '100%', padding: '8px', marginBottom: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
+                                    >
+                                        {Object.entries(activityTypeLabels).map(([val, label]) => (
+                                            <option key={val} value={val}>{label}</option>
+                                        ))}
+                                    </select>
+
                                     <input 
                                         type="text" 
-                                        placeholder="Ex: Arat, Erbicidat" 
+                                        placeholder="Detalii suplimentare (opțional)" 
                                         value={newActivityTitle} 
                                         onChange={e => setNewActivityTitle(e.target.value)}
                                         style={{ width: '100%', padding: '8px', marginBottom: '10px', boxSizing: 'border-box', border: '1px solid #ccc', borderRadius: '4px' }}
@@ -816,8 +892,33 @@ const MapPage = () => {
                             ) : (
                                 <ul style={{ paddingLeft: '20px', fontSize: '13px', color: '#444', marginBottom: '15px' }}>
                                     {cropSeasons.map((season) => (
-                                        <li key={season.id} style={{marginBottom: '5px'}}>
-                                            <strong>Anul {season.harvestYear}:</strong> <span style={{color: 'var(--primary-green)', fontWeight: 'bold'}}>{season.cropType}</span>
+                                        <li key={season.id} style={{marginBottom: '10px'}}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <strong>Anul {season.harvestYear}:</strong> <span style={{color: 'var(--primary-green)', fontWeight: 'bold'}}>{season.cropType}</span>
+                                                    {season.totalYieldKg && <span style={{marginLeft: '10px', color: '#555', fontStyle: 'italic'}}>({season.totalYieldKg} kg)</span>}
+                                                </div>
+                                                <button 
+                                                    onClick={() => startEditingYield(season)}
+                                                    style={{ background: 'none', border: 'none', color: '#1976d2', cursor: 'pointer', fontSize: '11px', textDecoration: 'underline' }}
+                                                >
+                                                    ⚖️ Recoltă
+                                                </button>
+                                            </div>
+
+                                            {editingSeasonId === season.id && (
+                                                <div style={{ marginTop: '5px', display: 'flex', gap: '5px', alignItems: 'center' }}>
+                                                    <input 
+                                                        type="number" 
+                                                        value={editingYieldValue} 
+                                                        onChange={e => setEditingYieldValue(e.target.value)} 
+                                                        placeholder="Kg"
+                                                        style={{ width: '80px', padding: '4px', fontSize: '12px' }}
+                                                    />
+                                                    <button onClick={() => handleUpdateYield(season.id)} className="btn-primary" style={{ padding: '4px 8px', fontSize: '11px' }}>Salvați</button>
+                                                    <button onClick={() => setEditingSeasonId(null)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>X</button>
+                                                </div>
+                                            )}
                                         </li>
                                     ))}
                                 </ul>

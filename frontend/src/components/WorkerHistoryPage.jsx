@@ -41,6 +41,15 @@ const WorkerHistoryPage = () => {
         });
     };
 
+    const activityTypeLabels = {
+        'ARAT': '🚜 Arat',
+        'SEMANAT': '🌱 Semănat',
+        'RECOLTAT': '🌾 Recoltat',
+        'IRIGAT': '💧 Irigat',
+        'TRATAMENT': '🧪 Tratament',
+        'ALTELE': '📋 Altele'
+    };
+
     const getStatusStyle = (status) => {
         switch (status) {
             case 'COMPLETED': return { color: '#4CAF50', fontWeight: 'bold' };
@@ -68,9 +77,18 @@ const WorkerHistoryPage = () => {
                     {activities.map(activity => (
                         <div key={activity.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', borderLeft: `5px solid ${activity.status === 'COMPLETED' ? '#4CAF50' : activity.status === 'IN_PROGRESS' ? '#1976d2' : '#f57c00'}` }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                <h3 style={{ margin: 0, color: '#333' }}>{activity.title}</h3>
+                                <h3 style={{ margin: 0, color: '#333' }}>
+                                    {activityTypeLabels[activity.type] || activity.type}
+                                    {activity.title && <span style={{ fontWeight: '400', fontSize: '14px', color: '#666', marginLeft: '10px' }}>- {activity.title}</span>}
+                                </h3>
                                 <span style={getStatusStyle(activity.status)}>{activity.status}</span>
                             </div>
+
+                            {activity.harvestedYieldKg > 0 && (
+                                <div style={{ backgroundColor: '#f0fdf4', padding: '10px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #dcfce7', display: 'inline-block' }}>
+                                    <strong style={{ color: 'var(--primary-green)' }}>⚖️ Cantitate recoltată: {activity.harvestedYieldKg.toLocaleString('ro-RO')} kg</strong>
+                                </div>
+                            )}
                             
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', fontSize: '14px' }}>
                                 <div>

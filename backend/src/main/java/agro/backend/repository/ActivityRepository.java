@@ -10,4 +10,5 @@ import java.util.List;
 public interface ActivityRepository extends JpaRepository<Activity, Long> {
     List<Activity> findByParcelId(Long parcelId);
     List<Activity> findByAssignedWorkers_Id(Long workerId);
+    List<Activity> findByParcel_Farm_IdOrderByStartDateDesc(Long farmId);
 }

@@ -12,9 +12,11 @@ import EmployeesPage from './components/EmployeesPage';
 import SuperAdminDashboard from './components/SuperAdminDashboard';
 import ManagerDashboard from './components/ManagerDashboard';
 import AgronomistDashboard from './components/AgronomistDashboard';
+import AgronomistHistoryPage from './components/AgronomistHistoryPage';
 import WorkerDashboard from './components/WorkerDashboard';
 import WorkerHistoryPage from './components/WorkerHistoryPage';
 import FarmProfilePage from './components/FarmProfilePage';
+import YieldReportPage from './components/YieldReportPage';
 
 import './App.css'; 
 
@@ -132,6 +134,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/agronomist/history" element={
+          <ProtectedRoute allowedRoles={['AGRONOMIST']}>
+            <AppLayout><AgronomistHistoryPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/worker" element={
           <ProtectedRoute allowedRoles={['WORKER']}>
             <WorkerDashboard />
@@ -154,6 +162,12 @@ function App() {
         <Route path="/manager/profile" element={
           <ProtectedRoute allowedRoles={['FARM_MANAGER']}>
             <AppLayout><FarmProfilePage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/manager/yield-report" element={
+          <ProtectedRoute allowedRoles={['FARM_MANAGER', 'SUPER_ADMIN']}>
+            <AppLayout><YieldReportPage /></AppLayout>
           </ProtectedRoute>
         } />
 

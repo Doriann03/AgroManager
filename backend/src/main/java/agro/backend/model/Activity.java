@@ -19,6 +19,12 @@ public class Activity {
     private Long id;
 
     private String title;
+
+    @Enumerated(EnumType.STRING)
+    private ActivityType type = ActivityType.ALTELE;
+
+    private Double harvestedYieldKg;
+
     private LocalDateTime startDate;
 
     @Enumerated(EnumType.STRING)

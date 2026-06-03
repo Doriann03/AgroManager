@@ -36,22 +36,42 @@ public class ActivityController {
         return ResponseEntity.ok(activities);
     }
 
+    @GetMapping
+    public ResponseEntity<List<Activity>> getAllActivities(Principal principal) {
+        User currentUser = getCurrentUser(principal);
+        if (currentUser.getFarm() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        List<Activity> activities = activityService.getActivitiesByFarmId(currentUser.getFarm().getId());
+        return ResponseEntity.ok(activities);
+    }
+
     @PutMapping("/{id}/status")
-    public ResponseEntity<Activity> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, String> body, Principal principal) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
-            String newStatus = body.get("status");
-            String startDate = body.get("startDate");
-            String endDate = body.get("endDate");
-            String comments = body.get("comments");
+            String newStatus = (String) body.get("status");
+            String startDate = (String) body.get("startDate");
+            String endDate = (String) body.get("endDate");
+            String comments = (String) body.get("comments");
+            Double harvestedYieldKg = null;
+            
+            Object yieldObj = body.get("harvestedYieldKg");
+            if (yieldObj != null && !yieldObj.toString().trim().isEmpty()) {
+                try {
+                    harvestedYieldKg = Double.valueOf(yieldObj.toString());
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body("Cantitatea recoltată trebuie să fie un număr valid.");
+                }
+            }
 
             if (newStatus == null) {
-                return ResponseEntity.badRequest().build();
+                return ResponseEntity.badRequest().body("Statusul lipsește.");
             }
-            Activity updatedActivity = activityService.updateActivityStatus(id, newStatus, startDate, endDate, comments, currentUser);
+            Activity updatedActivity = activityService.updateActivityStatus(id, newStatus, startDate, endDate, comments, harvestedYieldKg, currentUser);
             return ResponseEntity.ok(updatedActivity);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

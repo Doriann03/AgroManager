@@ -24,12 +24,29 @@ public class CropSeasonController {
         return ResponseEntity.ok(seasons);
     }
 
+    @GetMapping
+    public ResponseEntity<List<CropSeasonResponseDTO>> getAllSeasons(Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        return ResponseEntity.ok(cropSeasonService.getAllSeasonsForFarm(principal.getName()));
+    }
+
     @PostMapping
     public ResponseEntity<CropSeasonResponseDTO> addSeason(@RequestBody CropSeasonRequestDTO requestDTO, Principal principal) {
         if (principal == null) return ResponseEntity.status(401).build();
         try {
             CropSeasonResponseDTO savedSeason = cropSeasonService.addSeason(requestDTO, principal.getName());
             return ResponseEntity.ok(savedSeason);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{seasonId}")
+    public ResponseEntity<CropSeasonResponseDTO> updateSeason(@PathVariable Long seasonId, @RequestBody CropSeasonRequestDTO requestDTO, Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        try {
+            CropSeasonResponseDTO updatedSeason = cropSeasonService.updateSeason(seasonId, requestDTO, principal.getName());
+            return ResponseEntity.ok(updatedSeason);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
         }

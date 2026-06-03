@@ -18,6 +18,8 @@ public class CropSeason {
     @Column(nullable = false)
     private String cropType; // Tipul culturii (ex: "Porumb")
 
+    private Double totalYieldKg; // Cantitatea recoltata in kg (ex: 8500)
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parcel_id", nullable = false)
     private Parcel parcel;

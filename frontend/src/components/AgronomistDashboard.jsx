@@ -26,6 +26,13 @@ const AgronomistDashboard = () => {
             icon: '📦',
             path: '/inventory',
             color: '#6366f1'
+        },
+        {
+            title: 'Istoric Sarcini Alocate',
+            description: 'Vedeți statusul tuturor lucrărilor atribuite muncitorilor.',
+            icon: '📋',
+            path: '/agronomist/history',
+            color: '#3b82f6'
         }
     ];
 

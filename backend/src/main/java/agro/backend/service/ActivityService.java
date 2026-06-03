@@ -2,6 +2,8 @@ package agro.backend.service;
 
 import agro.backend.model.Activity;
 import agro.backend.model.ActivityConsumption;
+import agro.backend.model.ActivityType;
+import agro.backend.model.CropSeason;
 import agro.backend.model.InventoryItem;
 import agro.backend.model.Machinery;
 import agro.backend.model.Parcel;
@@ -9,6 +11,7 @@ import agro.backend.model.User;
 import agro.backend.model.dto.ActivityRequestDTO;
 import agro.backend.model.dto.ConsumptionRequestDTO;
 import agro.backend.repository.ActivityRepository;
+import agro.backend.repository.CropSeasonRepository;
 import agro.backend.repository.InventoryItemRepository;
 import agro.backend.repository.MachineryRepository;
 import agro.backend.repository.ParcelRepository;
@@ -31,6 +34,7 @@ public class ActivityService {
     private final MachineryRepository machineryRepository;
     private final InventoryItemRepository inventoryItemRepository;
     private final UserRepository userRepository;
+    private final CropSeasonRepository cropSeasonRepository;
 
     public List<Activity> getActivitiesByParcelId(Long parcelId) {
         return activityRepository.findByParcelId(parcelId);
@@ -40,12 +44,27 @@ public class ActivityService {
         return activityRepository.findByAssignedWorkers_Id(workerId);
     }
 
+    public List<Activity> getActivitiesByFarmId(Long farmId) {
+        return activityRepository.findByParcel_Farm_IdOrderByStartDateDesc(farmId);
+    }
+
+    private java.time.LocalDateTime parseDateTime(String dateStr) {
+        if (dateStr == null || dateStr.isEmpty()) return null;
+        try {
+            if (dateStr.length() == 16) { // Format: yyyy-MM-ddTHH:mm
+                return java.time.LocalDateTime.parse(dateStr, java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm"));
+            }
+            return java.time.LocalDateTime.parse(dateStr);
+        } catch (Exception e) {
+            throw new RuntimeException("Format data invalid: " + dateStr);
+        }
+    }
+
     @Transactional
-    public Activity updateActivityStatus(Long activityId, String newStatus, String startDateStr, String endDateStr, String comments, User currentUser) {
+    public Activity updateActivityStatus(Long activityId, String newStatus, String startDateStr, String endDateStr, String comments, Double harvestedYieldKg, User currentUser) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new RuntimeException("Activitatea nu a fost găsită."));
                 
-        // Verificăm dacă userul are voie să modifice (dacă este atribuit)
         boolean isAssigned = activity.getAssignedWorkers().stream()
                 .anyMatch(worker -> worker.getId().equals(currentUser.getId()));
                 
@@ -57,14 +76,45 @@ public class ActivityService {
             agro.backend.model.ActivityStatus status = agro.backend.model.ActivityStatus.valueOf(newStatus.toUpperCase());
             activity.setStatus(status);
             
-            if (startDateStr != null && !startDateStr.isEmpty()) {
-                activity.setStartDate(java.time.LocalDateTime.parse(startDateStr));
-            }
-            if (endDateStr != null && !endDateStr.isEmpty()) {
-                activity.setEndDate(java.time.LocalDateTime.parse(endDateStr));
-            }
-            if (comments != null) {
-                activity.setComments(comments);
+            if (startDateStr != null && !startDateStr.isEmpty()) activity.setStartDate(parseDateTime(startDateStr));
+            if (endDateStr != null && !endDateStr.isEmpty()) activity.setEndDate(parseDateTime(endDateStr));
+            if (comments != null) activity.setComments(comments);
+            if (harvestedYieldKg != null) activity.setHarvestedYieldKg(harvestedYieldKg);
+
+            // LOGICA SINCRONIZARE RECOLTA (RECOLTAT -> CropSeason)
+            if (activity.getType() == ActivityType.RECOLTAT && status == agro.backend.model.ActivityStatus.COMPLETED && harvestedYieldKg != null && harvestedYieldKg > 0) {
+                
+                // 1. Determinam anul (prioritate data sfarsit -> data inceput -> acum)
+                int syncYear = java.time.LocalDateTime.now().getYear();
+                if (activity.getEndDate() != null) syncYear = activity.getEndDate().getYear();
+                else if (activity.getStartDate() != null) syncYear = activity.getStartDate().getYear();
+                
+                final int yearToUse = syncYear;
+                
+                // 2. Obtinem parcela (fresh din DB pentru a evita proxy issues)
+                Parcel parcel = parcelRepository.findById(activity.getParcel().getId())
+                        .orElseThrow(() -> new RuntimeException("Parcela asociată nu a fost găsită."));
+                
+                System.out.println(">>> SYNC: Incepere proces pentru parcela " + parcel.getName() + " in anul " + yearToUse + " cu yield: " + harvestedYieldKg);
+
+                // 3. Cautam sau cream sezonul
+                java.util.Optional<CropSeason> existingSeason = cropSeasonRepository.findByParcelIdAndHarvestYear(parcel.getId(), yearToUse);
+                
+                if (existingSeason.isPresent()) {
+                    CropSeason s = existingSeason.get();
+                    double oldYield = s.getTotalYieldKg() != null ? s.getTotalYieldKg() : 0;
+                    s.setTotalYieldKg(oldYield + harvestedYieldKg);
+                    cropSeasonRepository.save(s);
+                    System.out.println(">>> SYNC: Actualizat sezon existent (ID: " + s.getId() + "). Noua recolta: " + s.getTotalYieldKg());
+                } else {
+                    CropSeason newSeason = new CropSeason();
+                    newSeason.setParcel(parcel);
+                    newSeason.setHarvestYear(yearToUse);
+                    newSeason.setCropType(parcel.getCropType() != null ? parcel.getCropType() : "Nespecificat");
+                    newSeason.setTotalYieldKg(harvestedYieldKg);
+                    cropSeasonRepository.save(newSeason);
+                    System.out.println(">>> SYNC: Creat sezon NOU pentru " + yearToUse + ". Recolta: " + harvestedYieldKg);
+                }
             }
 
             return activityRepository.save(activity);
@@ -103,6 +153,7 @@ public class ActivityService {
         // Creăm activitatea
         Activity activity = new Activity();
         activity.setTitle(dto.getTitle());
+        activity.setType(dto.getType() != null ? dto.getType() : ActivityType.ALTELE);
         activity.setStartDate(dto.getStartDate()); 
         activity.setParcel(parcel);
         activity.setMachineries(selectedMachineries);

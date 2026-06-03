@@ -1,5 +1,6 @@
 package agro.backend.model.dto;
 
+import agro.backend.model.ActivityType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -8,6 +9,8 @@ import java.util.List;
 @Data
 public class ActivityRequestDTO {
     private String title;
+    private ActivityType type;
+    private Double harvestedYieldKg;
     private LocalDateTime startDate;
     private Long parcelId;
     private List<Long> machineryIds;
