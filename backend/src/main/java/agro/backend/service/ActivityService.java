@@ -8,6 +8,7 @@ import agro.backend.model.InventoryItem;
 import agro.backend.model.Machinery;
 import agro.backend.model.Parcel;
 import agro.backend.model.User;
+import agro.backend.model.UserRole;
 import agro.backend.model.dto.ActivityRequestDTO;
 import agro.backend.model.dto.ConsumptionRequestDTO;
 import agro.backend.repository.ActivityRepository;
@@ -21,9 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class ActivityService {
     private final InventoryItemRepository inventoryItemRepository;
     private final UserRepository userRepository;
     private final CropSeasonRepository cropSeasonRepository;
+    private final NotificationService notificationService;
 
     public List<Activity> getActivitiesByParcelId(Long parcelId) {
         return activityRepository.findByParcelId(parcelId);
@@ -84,36 +88,46 @@ public class ActivityService {
             // LOGICA SINCRONIZARE RECOLTA (RECOLTAT -> CropSeason)
             if (activity.getType() == ActivityType.RECOLTAT && status == agro.backend.model.ActivityStatus.COMPLETED && harvestedYieldKg != null && harvestedYieldKg > 0) {
                 
-                // 1. Determinam anul (prioritate data sfarsit -> data inceput -> acum)
                 int syncYear = java.time.LocalDateTime.now().getYear();
                 if (activity.getEndDate() != null) syncYear = activity.getEndDate().getYear();
                 else if (activity.getStartDate() != null) syncYear = activity.getStartDate().getYear();
                 
                 final int yearToUse = syncYear;
-                
-                // 2. Obtinem parcela (fresh din DB pentru a evita proxy issues)
                 Parcel parcel = parcelRepository.findById(activity.getParcel().getId())
                         .orElseThrow(() -> new RuntimeException("Parcela asociată nu a fost găsită."));
                 
-                System.out.println(">>> SYNC: Incepere proces pentru parcela " + parcel.getName() + " in anul " + yearToUse + " cu yield: " + harvestedYieldKg);
+                cropSeasonRepository.findByParcelIdAndHarvestYear(parcel.getId(), yearToUse)
+                    .ifPresentOrElse(season -> {
+                        double currentYield = season.getTotalYieldKg() != null ? season.getTotalYieldKg() : 0;
+                        season.setTotalYieldKg(currentYield + harvestedYieldKg);
+                        cropSeasonRepository.save(season);
+                    }, () -> {
+                        CropSeason newSeason = new CropSeason();
+                        newSeason.setParcel(parcel);
+                        newSeason.setHarvestYear(yearToUse);
+                        newSeason.setCropType(parcel.getCropType() != null ? parcel.getCropType() : "Nespecificat");
+                        newSeason.setTotalYieldKg(harvestedYieldKg);
+                        cropSeasonRepository.save(newSeason);
+                    });
+            }
 
-                // 3. Cautam sau cream sezonul
-                java.util.Optional<CropSeason> existingSeason = cropSeasonRepository.findByParcelIdAndHarvestYear(parcel.getId(), yearToUse);
-                
-                if (existingSeason.isPresent()) {
-                    CropSeason s = existingSeason.get();
-                    double oldYield = s.getTotalYieldKg() != null ? s.getTotalYieldKg() : 0;
-                    s.setTotalYieldKg(oldYield + harvestedYieldKg);
-                    cropSeasonRepository.save(s);
-                    System.out.println(">>> SYNC: Actualizat sezon existent (ID: " + s.getId() + "). Noua recolta: " + s.getTotalYieldKg());
-                } else {
-                    CropSeason newSeason = new CropSeason();
-                    newSeason.setParcel(parcel);
-                    newSeason.setHarvestYear(yearToUse);
-                    newSeason.setCropType(parcel.getCropType() != null ? parcel.getCropType() : "Nespecificat");
-                    newSeason.setTotalYieldKg(harvestedYieldKg);
-                    cropSeasonRepository.save(newSeason);
-                    System.out.println(">>> SYNC: Creat sezon NOU pentru " + yearToUse + ". Recolta: " + harvestedYieldKg);
+            // TRIGGER NOTIFICARI pentru Agronomi si Manageri
+            if (status == agro.backend.model.ActivityStatus.COMPLETED) {
+                Parcel parcel = parcelRepository.findById(activity.getParcel().getId()).orElse(null);
+                if (parcel != null && parcel.getFarm() != null) {
+                    Long farmId = parcel.getFarm().getId();
+                    List<User> recipients = userRepository.findByFarmIdAndRoleIn(
+                        farmId, 
+                        Arrays.asList(UserRole.AGRONOMIST, UserRole.FARM_MANAGER)
+                    );
+                    
+                    String typeLabel = activity.getType() != null ? activity.getType().toString() : "Activitate";
+                    String message = String.format("Lucrarea '%s' a fost finalizată pe parcela %s de către %s.", 
+                            typeLabel, parcel.getName(), currentUser.getUsername());
+                    
+                    for (User recipient : recipients) {
+                        notificationService.createNotification(recipient, message, "TASK_COMPLETED");
+                    }
                 }
             }
 
@@ -130,7 +144,6 @@ public class ActivityService {
         }
         Long userFarmId = currentUser.getFarm().getId();
 
-        // Găsim parcela și verificăm apartenența la fermă
         Parcel parcel = parcelRepository.findById(dto.getParcelId())
                 .orElseThrow(() -> new RuntimeException("Parcela nu a fost găsită"));
         
@@ -138,7 +151,6 @@ public class ActivityService {
             throw new RuntimeException("Parcela nu aparține fermei curente.");
         }
 
-        // Găsim utilajele și verificăm apartenența la fermă
         Set<Machinery> selectedMachineries = new HashSet<>();
         if (dto.getMachineryIds() != null && !dto.getMachineryIds().isEmpty()) {
             List<Machinery> machineries = machineryRepository.findAllById(dto.getMachineryIds());
@@ -150,7 +162,6 @@ public class ActivityService {
             selectedMachineries.addAll(machineries);
         }
 
-        // Creăm activitatea
         Activity activity = new Activity();
         activity.setTitle(dto.getTitle());
         activity.setType(dto.getType() != null ? dto.getType() : ActivityType.ALTELE);
@@ -172,7 +183,6 @@ public class ActivityService {
         assignedWorkers.addAll(workers);
         activity.setAssignedWorkers(assignedWorkers);
 
-        // Logica pentru consumuri și stocuri
         if (dto.getConsumptions() != null && !dto.getConsumptions().isEmpty()) {
             for (ConsumptionRequestDTO consDto : dto.getConsumptions()) {
                 InventoryItem item = inventoryItemRepository.findById(consDto.getInventoryItemId())
@@ -187,11 +197,9 @@ public class ActivityService {
                                                ". Disponibil: " + item.getQuantityAvailable() + item.getUnitOfMeasure());
                 }
                 
-                // Scădem stocul
                 item.setQuantityAvailable(item.getQuantityAvailable() - consDto.getQuantityUsed());
-                inventoryItemRepository.save(item); // Salvăm modificarea stocului
+                inventoryItemRepository.save(item);
                 
-                // Creăm înregistrarea de consum
                 ActivityConsumption consumption = new ActivityConsumption();
                 consumption.setActivity(activity);
                 consumption.setInventoryItem(item);
