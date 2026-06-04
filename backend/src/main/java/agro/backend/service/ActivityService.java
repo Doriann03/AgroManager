@@ -80,10 +80,35 @@ public class ActivityService {
             agro.backend.model.ActivityStatus status = agro.backend.model.ActivityStatus.valueOf(newStatus.toUpperCase());
             activity.setStatus(status);
             
+            // LOGICA AUTOMATA PENTRU STATUSUL UTILAJELOR
+            if (status == agro.backend.model.ActivityStatus.IN_PROGRESS) {
+                activity.getMachineries().forEach(m -> {
+                    m.setStatus(agro.backend.model.MachineryStatus.IN_CURSA);
+                    machineryRepository.save(m);
+                });
+            } else if (status == agro.backend.model.ActivityStatus.COMPLETED) {
+                activity.getMachineries().forEach(m -> {
+                    m.setStatus(agro.backend.model.MachineryStatus.DISPONIBIL);
+                    machineryRepository.save(m);
+                });
+            }
+
             if (startDateStr != null && !startDateStr.isEmpty()) activity.setStartDate(parseDateTime(startDateStr));
             if (endDateStr != null && !endDateStr.isEmpty()) activity.setEndDate(parseDateTime(endDateStr));
             if (comments != null) activity.setComments(comments);
             if (harvestedYieldKg != null) activity.setHarvestedYieldKg(harvestedYieldKg);
+
+            // LOGICA AUTOMATA PENTRU ORELE DE FUNCTIONARE
+            if (status == agro.backend.model.ActivityStatus.COMPLETED && activity.getStartDate() != null && activity.getEndDate() != null) {
+                long durationHours = java.time.Duration.between(activity.getStartDate(), activity.getEndDate()).toHours();
+                if (durationHours > 0) {
+                    activity.getMachineries().forEach(m -> {
+                        int currentHours = m.getTotalHours() != null ? m.getTotalHours() : 0;
+                        m.setTotalHours(currentHours + (int)durationHours);
+                        machineryRepository.save(m);
+                    });
+                }
+            }
 
             // LOGICA SINCRONIZARE RECOLTA (RECOLTAT -> CropSeason)
             if (activity.getType() == ActivityType.RECOLTAT && status == agro.backend.model.ActivityStatus.COMPLETED && harvestedYieldKg != null && harvestedYieldKg > 0) {

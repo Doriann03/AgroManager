@@ -1,218 +1,271 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/axiosConfig';
-import BackButton from './BackButton'; // Importăm componenta BackButton
+import BackButton from './BackButton';
+
+const getStatusBadge = (status) => {
+    switch(status) {
+        case 'DISPONIBIL': return <span style={{backgroundColor: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'}}>✅ Disponibil</span>;
+        case 'IN_CURSA': return <span style={{backgroundColor: '#fef9c3', color: '#854d0e', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'}}>🚜 În Cursă</span>;
+        case 'IN_SERVICE': return <span style={{backgroundColor: '#fee2e2', color: '#991b1b', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'}}>🔧 În Service</span>;
+        default: return <span style={{backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold'}}>{status}</span>;
+    }
+};
 
 const MachineryPage = () => {
     const [machineryList, setMachineryList] = useState([]);
-    const [showForm, setShowForm] = useState(false);
-    
+    const [showFormModal, setShowFormModal] = useState(false);
+    const [selectedMachinery, setSelectedMachinery] = useState(null);
+    const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+
     const [formData, setFormData] = useState({ 
-        id: null,
-        name: '', 
-        type: '', 
-        model: '', 
-        licensePlate: '',
-        workHours: '',
-        status: 'ACTIVE',
-        purchaseDate: '' 
+        id: null, name: '', type: 'TRACTOR', model: '', licensePlate: '',
+        totalHours: 0, maintenanceIntervalHours: 250
     });
     
-    const [error, setError] = useState('');
+    const [maintenanceData, setMaintenanceData] = useState({
+        date: new Date().toISOString().slice(0,10), description: '', cost: '', hoursAtMaintenance: ''
+    });
 
     const fetchMachinery = useCallback(async () => {
         try {
             const response = await apiClient.get('/api/machinery');
             setMachineryList(response.data);
-        } catch (err) {
-            console.error("Eroare la preluarea utilajelor:", err);
-            setError('Nu s-au putut încărca datele.');
-        }
+        } catch (err) { console.error(err); }
     }, []);
 
     useEffect(() => {
         fetchMachinery();
     }, [fetchMachinery]);
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleOpenAddForm = () => {
+        setFormData({ 
+            id: null, name: '', type: 'TRACTOR', model: '', licensePlate: '',
+            totalHours: 0, maintenanceIntervalHours: 250
+        });
+        setShowFormModal(true);
     };
 
-    const handleEditClick = (machinery) => {
+    const handleOpenEditForm = (machinery) => {
         setFormData({
             id: machinery.id,
-            name: machinery.name || '',
-            type: machinery.type || '',
+            name: machinery.name,
+            type: machinery.type,
             model: machinery.model || '',
             licensePlate: machinery.licensePlate || '',
-            workHours: machinery.workHours || '',
-            status: machinery.status || 'ACTIVE',
-            purchaseDate: machinery.purchaseDate || ''
+            totalHours: machinery.totalHours || 0,
+            maintenanceIntervalHours: machinery.maintenanceIntervalHours || 250
         });
-        setShowForm(true);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setShowFormModal(true);
     };
 
-    const resetForm = () => {
-        setFormData({ id: null, name: '', type: '', model: '', licensePlate: '', workHours: '', status: 'ACTIVE', purchaseDate: '' });
-        setShowForm(false);
-        setError('');
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSaveMachinery = async (e) => {
         e.preventDefault();
-        if (!formData.name || !formData.type) {
-            setError('Numele și tipul sunt obligatorii.');
-            return;
-        }
-        setError('');
-        
+        const payload = { ...formData, totalHours: Number(formData.totalHours), maintenanceIntervalHours: Number(formData.maintenanceIntervalHours) };
         try {
             if (formData.id) {
-                await apiClient.put(`/api/machinery/${formData.id}`, formData);
+                await apiClient.put(`/api/machinery/${formData.id}`, payload);
             } else {
-                await apiClient.post('/api/machinery', formData);
+                await apiClient.post('/api/machinery', payload);
             }
-            resetForm();
-            await fetchMachinery(); 
-        } catch (err) {
-            console.error("Eroare la salvarea utilajului:", err);
-            setError('Salvarea a eșuat.');
-        }
+            setShowFormModal(false);
+            fetchMachinery();
+        } catch (err) { console.error(err); }
     };
 
+    const handleSaveMaintenance = async (e) => {
+        e.preventDefault();
+        if (!selectedMachinery) return;
+        const payload = { ...maintenanceData, cost: Number(maintenanceData.cost), hoursAtMaintenance: Number(maintenanceData.hoursAtMaintenance) };
+        try {
+            const response = await apiClient.post(`/api/machinery/${selectedMachinery.id}/maintenance-logs`, payload);
+            setShowMaintenanceModal(false);
+            setSelectedMachinery(prev => ({...prev, maintenanceLogs: [...(prev.maintenanceLogs || []), response.data]}));
+            fetchMachinery();
+            setMaintenanceData({ date: new Date().toISOString().slice(0,10), description: '', cost: '', hoursAtMaintenance: '' });
+        } catch (err) { console.error(err); }
+    };
+    
     const handleDelete = async (id) => {
-        if (window.confirm('Ești sigur că vrei să ștergi acest utilaj? Toate activitățile asociate ar putea fi afectate.')) {
+        if(window.confirm("Ștergi acest utilaj?")) {
             try {
                 await apiClient.delete(`/api/machinery/${id}`);
-                await fetchMachinery(); 
-            } catch (err) {
-                console.error("Eroare la ștergerea utilajului:", err);
-                alert('Ștergerea a eșuat.');
-            }
+                fetchMachinery();
+            } catch(err) { alert("Ștergerea a eșuat.")}
         }
     };
 
-    const getStatusStyle = (status) => {
-        switch(status) {
-            case 'ACTIVE': return { backgroundColor: '#e8f5e9', color: '#2e7d32', border: '1px solid #c8e6c9' };
-            case 'REPAIR': return { backgroundColor: '#fff8e1', color: '#f57f17', border: '1px solid #ffecb3' };
-            case 'INACTIVE': return { backgroundColor: '#ffebee', color: '#c62828', border: '1px solid #ffcdd2' };
-            default: return {};
-        }
+    const MaintenanceProgressBar = ({ total, next, interval }) => {
+        if (!total || !next || !interval) return <div style={{fontSize: '11px', color: '#94a3b8'}}>Date mentenanță incomplete</div>;
+        const lastMaintHours = next - interval;
+        const hoursSinceMaint = total - lastMaintHours;
+        const progress = Math.min((hoursSinceMaint / interval) * 100, 100);
+        const color = progress > 90 ? '#ef4444' : progress > 70 ? '#f97316' : '#22c55e';
+        
+        return (
+             <div style={{ width: '100%', backgroundColor: '#e5e7eb', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, backgroundColor: color, height: '10px', borderRadius: '10px', transition: 'width 0.5s ease' }}></div>
+            </div>
+        );
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1200px', margin: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h1 style={{ color: 'var(--primary-green)' }}>Parcul Auto (Utilaje)</h1>
+        <div style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>Gestiune Flotă Utilaje</h1>
                 <BackButton />
             </div>
 
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+                 <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', backgroundColor: '#f8fafc' }}>
                     <h3 style={{ margin: 0 }}>Flota Mea ({machineryList.length})</h3>
-                    {!showForm && (
-                        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Adaugă Utilaj</button>
-                    )}
+                    <button className="btn-primary" onClick={handleOpenAddForm}>+ Utilaj Nou</button>
                 </div>
-
-                {showForm && (
-                    <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--light-gray)', padding: '20px', borderRadius: '8px', marginBottom: '20px', border: '1px solid var(--border-color)' }}>
-                        <h4 style={{marginTop: 0, color: 'var(--primary-green)'}}>{formData.id ? 'Modifică Utilaj' : 'Adaugă Utilaj Nou'}</h4>
-                        {error && <p style={{ color: 'red' }}>{error}</p>}
-                        
-                        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '15px' }}>
-                            <div style={{ flex: '1 1 200px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Nume (Ex: Tractor Fendt):*</label>
-                                <input name="name" value={formData.name} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} required />
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Tip (Ex: Tractor, Combină):*</label>
-                                <input name="type" value={formData.type} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} required />
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Model (Ex: 942 Vario):</label>
-                                <input name="model" value={formData.model} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Număr Înmatriculare:</label>
-                                <input name="licensePlate" value={formData.licensePlate} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Ore Funcționare:</label>
-                                <input name="workHours" type="number" value={formData.workHours} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Status:</label>
-                                <select name="status" value={formData.status} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}>
-                                    <option value="ACTIVE">Activ</option>
-                                    <option value="REPAIR">În reparație</option>
-                                    <option value="INACTIVE">Inactiv</option>
-                                </select>
-                            </div>
-                            <div style={{ flex: '1 1 150px' }}>
-                                <label style={{fontSize: '14px', color: '#555'}}>Data Achiziției:</label>
-                                <input name="purchaseDate" type="date" value={formData.purchaseDate} onChange={handleChange} style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }} />
-                            </div>
-                        </div>
-                        
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button type="submit" className="btn-primary" style={{ padding: '10px 20px' }}>{formData.id ? 'Salvează Modificările' : 'Adaugă Utilajul'}</button>
-                            <button type="button" className="btn-secondary" onClick={resetForm} style={{ padding: '10px 20px' }}>Anulează</button>
-                        </div>
-                    </form>
-                )}
-
-                {machineryList.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>Nu aveți niciun utilaj înregistrat.</p>
-                ) : (
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px', fontSize: '14px' }}>
-                            <thead>
-                                <tr style={{ backgroundColor: 'var(--primary-green)', color: 'white', textAlign: 'left' }}>
-                                    <th style={{ padding: '12px', borderRadius: '4px 0 0 0' }}>Nume</th>
-                                    <th style={{ padding: '12px' }}>Tip & Model</th>
-                                    <th style={{ padding: '12px' }}>Nr. Înmatriculare</th>
-                                    <th style={{ padding: '12px' }}>Ore Funcționare</th>
-                                    <th style={{ padding: '12px' }}>Status</th>
-                                    <th style={{ padding: '12px' }}>Data Achiziției</th>
-                                    <th style={{ padding: '12px', borderRadius: '0 4px 0 0', textAlign: 'center' }}>Acțiuni</th>
+                
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ textAlign: 'left', borderBottom: '2px solid var(--border-color)' }}>
+                                <th style={{ padding: '15px' }}>UTILAJ</th>
+                                <th style={{ padding: '15px' }}>TIP</th>
+                                <th style={{ padding: '15px' }}>STATUS</th>
+                                <th style={{ padding: '15px' }}>ORE MOTOR</th>
+                                <th style={{ padding: '15px', minWidth: '200px' }}>PROGRES MENTENANȚĂ</th>
+                                <th style={{ padding: '15px', textAlign: 'right' }}>ACȚIUNI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {machineryList.map(m => (
+                                <tr key={m.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <td style={{ padding: '15px', fontWeight: 'bold' }}>{m.name} {m.model ? `- ${m.model}` : ''}</td>
+                                    <td style={{ padding: '15px' }}>{m.type}</td>
+                                    <td style={{ padding: '15px' }}>{getStatusBadge(m.status)}</td>
+                                    <td style={{ padding: '15px', fontWeight: '600' }}>{m.totalHours || 0} ore</td>
+                                    <td style={{ padding: '15px' }}>
+                                        <MaintenanceProgressBar total={m.totalHours} next={m.nextMaintenanceHours} interval={m.maintenanceIntervalHours} />
+                                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Revizie la {m.nextMaintenanceHours || '?'} ore</div>
+                                    </td>
+                                    <td style={{ padding: '15px', textAlign: 'right' }}>
+                                        <button onClick={() => handleOpenEditForm(m)} style={{marginRight: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px'}} title="Editează">✏️</button>
+                                        <button className="btn-secondary" onClick={() => { setSelectedMachinery(m); setShowMaintenanceModal(true); }}>Detalii & Service</button>
+                                        <button onClick={() => handleDelete(m.id)} style={{marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px'}} title="Șterge">🗑️</button>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {machineryList.map((m, index) => (
-                                    <tr key={m.id} style={{ borderBottom: '1px solid #eee', backgroundColor: index % 2 === 0 ? '#fafafa' : '#fff' }}>
-                                        <td style={{ padding: '12px', fontWeight: 'bold' }}>{m.name}</td>
-                                        <td style={{ padding: '12px' }}>{m.type} {m.model ? `- ${m.model}` : ''}</td>
-                                        <td style={{ padding: '12px' }}>{m.licensePlate || '-'}</td>
-                                        <td style={{ padding: '12px' }}>{m.workHours ? `${m.workHours} ore` : '-'}</td>
-                                        <td style={{ padding: '12px' }}>
-                                            <span style={{ ...getStatusStyle(m.status), padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
-                                                {m.status === 'ACTIVE' ? 'Activ' : m.status === 'REPAIR' ? 'În Reparație' : 'Inactiv'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '12px' }}>{m.purchaseDate || '-'}</td>
-                                        <td style={{ padding: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                                            <button 
-                                                onClick={() => handleEditClick(m)}
-                                                style={{ backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', marginRight: '5px' }}
-                                            >
-                                                Editează
-                                            </button>
-                                            <button 
-                                                onClick={() => handleDelete(m.id)}
-                                                style={{ backgroundColor: '#ff4444', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
-                                            >
-                                                Șterge
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+            
+            {/* MODAL PENTRU ADĂUGARE/EDITARE UTILAJ */}
+            {showFormModal && (
+                <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                    <div className="card" style={{width: '600px', backgroundColor: 'white', padding: '30px'}}>
+                        <h2 style={{marginTop: 0, color: 'var(--primary-green)'}}>{formData.id ? 'Editare Utilaj' : 'Adăugare Utilaj Nou'}</h2>
+                        <form onSubmit={handleSaveMachinery}>
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px'}}>
+                                <div>
+                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>NUME UTILAJ</label>
+                                    <input name="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} required />
+                                </div>
+                                <div>
+                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>TIP</label>
+                                    <select name="type" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}}>
+                                        <option value="TRACTOR">Tractor</option>
+                                        <option value="COMBINA">Combină</option>
+                                        <option value="SEMANATOARE">Semănătoare</option>
+                                        <option value="PLUG">Plug</option>
+                                        <option value="DISC">Disc</option>
+                                        <option value="PULVERIZATOR">Pulverizator</option>
+                                        <option value="ALTELE">Altele</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>MODEL</label>
+                                    <input name="model" value={formData.model} onChange={e => setFormData({...formData, model: e.target.value})} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                                </div>
+                                <div>
+                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>NR. ÎNMATRICULARE</label>
+                                    <input name="licensePlate" value={formData.licensePlate} onChange={e => setFormData({...formData, licensePlate: e.target.value})} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                                </div>
+                                <div>
+                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>ORE MOTOR CURENTE</label>
+                                    <input name="totalHours" type="number" value={formData.totalHours} onChange={e => setFormData({...formData, totalHours: e.target.value})} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                                </div>
+                                <div>
+                                    <label style={{fontSize: '12px', fontWeight: 'bold'}}>INTERVAL REVIZIE (ORE)</label>
+                                    <input name="maintenanceIntervalHours" type="number" value={formData.maintenanceIntervalHours} onChange={e => setFormData({...formData, maintenanceIntervalHours: e.target.value})} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
+                                <button type="submit" className="btn-primary">Salvează Utilaj</button>
+                                <button type="button" className="btn-secondary" onClick={() => setShowFormModal(false)}>Anulează</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL PENTRU DETALII & JURNAL SERVICE */}
+            {showMaintenanceModal && selectedMachinery && (
+                 <div style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+                    <div className="card" style={{width: '800px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', backgroundColor: 'white', padding: '30px', position: 'relative'}}>
+                        <button onClick={() => setShowMaintenanceModal(false)} style={{position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b'}}>×</button>
+                        <h2 style={{ marginTop: 0, color: 'var(--primary-green)' }}>Jurnal Service: {selectedMachinery.name}</h2>
+                        
+                        <div style={{flex: '1', overflowY: 'auto', marginBottom: '20px', paddingRight: '10px'}}>
+                            <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'left'}}>
+                                <thead>
+                                    <tr style={{borderBottom: '2px solid #e2e8f0', color: '#64748b'}}>
+                                        <th style={{padding: '10px'}}>DATA</th>
+                                        <th style={{padding: '10px'}}>DESCRIERE INTERVENȚIE</th>
+                                        <th style={{padding: '10px'}}>COST</th>
+                                        <th style={{padding: '10px'}}>ORE MOTOR</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(!selectedMachinery.maintenanceLogs || selectedMachinery.maintenanceLogs.length === 0) ? (
+                                        <tr>
+                                            <td colSpan="4" style={{padding: '20px', textAlign: 'center', color: '#94a3b8', fontStyle: 'italic'}}>Nu există înregistrări în jurnalul de service.</td>
+                                        </tr>
+                                    ) : (
+                                        selectedMachinery.maintenanceLogs.map(log => (
+                                            <tr key={log.id} style={{borderBottom: '1px solid #f1f5f9'}}>
+                                                <td style={{padding: '15px 10px', fontWeight: 'bold'}}>{new Date(log.date).toLocaleDateString('ro-RO')}</td>
+                                                <td style={{padding: '15px 10px'}}>{log.description}</td>
+                                                <td style={{padding: '15px 10px', color: '#dc2626', fontWeight: 'bold'}}>{log.cost ? `${log.cost} RON` : '-'}</td>
+                                                <td style={{padding: '15px 10px'}}>{log.hoursAtMaintenance} ore</td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <form onSubmit={handleSaveMaintenance} style={{paddingTop: '20px', borderTop: '2px solid #e2e8f0'}}>
+                            <h4 style={{marginTop: 0, color: '#0369a1'}}>+ Adaugă Intervenție Nouă</h4>
+                            <div style={{display: 'flex', gap: '15px', alignItems: 'flex-end'}}>
+                                <div style={{flex: 1}}>
+                                    <label style={{fontSize: '11px', fontWeight: 'bold'}}>DATA</label>
+                                    <input type="date" value={maintenanceData.date} onChange={e => setMaintenanceData({...maintenanceData, date: e.target.value})} style={{width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1'}} required />
+                                </div>
+                                <div style={{flex: 3}}>
+                                    <label style={{fontSize: '11px', fontWeight: 'bold'}}>DESCRIERE</label>
+                                    <input type="text" placeholder="Ex: Schimb ulei și filtre" value={maintenanceData.description} onChange={e => setMaintenanceData({...maintenanceData, description: e.target.value})} style={{width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1'}} required />
+                                </div>
+                                <div style={{flex: 1}}>
+                                    <label style={{fontSize: '11px', fontWeight: 'bold'}}>COST (RON)</label>
+                                    <input type="number" value={maintenanceData.cost} onChange={e => setMaintenanceData({...maintenanceData, cost: e.target.value})} style={{width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                                </div>
+                                <div style={{flex: 1}}>
+                                    <label style={{fontSize: '11px', fontWeight: 'bold'}}>ORE MOTOR</label>
+                                    <input type="number" value={maintenanceData.hoursAtMaintenance} onChange={e => setMaintenanceData({...maintenanceData, hoursAtMaintenance: e.target.value})} style={{width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1'}} required />
+                                </div>
+                                <button type="submit" className="btn-primary" style={{padding: '9px 15px', whiteSpace: 'nowrap'}}>Salvează</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -1,11 +1,14 @@
 package agro.backend.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "machinery")
@@ -18,24 +21,40 @@ public class Machinery {
     private Long id;
 
     @Column(nullable = false)
-    private String name; // Ex: "Tractor John Deere"
-
-    private String type; // Ex: "Tractor", "Combină"
+    private String name; // Ex: "Tractor John Deere 8R 410"
 
     private String model; // Ex: "8R 410"
 
-    private String licensePlate; // Adăugat: Număr înmatriculare
-
-    private Integer workHours; // Adăugat: Ore de funcționare
+    private String licensePlate;
 
     @Enumerated(EnumType.STRING)
-    private MachineryStatus status; // Adăugat: Statusul utilajului
+    @Column(nullable = false)
+    private MachineryType type = MachineryType.ALTELE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MachineryStatus status = MachineryStatus.DISPONIBIL;
+
+    @Column(name = "total_hours")
+    private Integer totalHours;
+
+    @Column(name = "maintenance_interval_hours")
+    private Integer maintenanceIntervalHours;
+
+    @Column(name = "next_maintenance_hours")
+    private Integer nextMaintenanceHours;
+
+    @Column(name = "last_maintenance_date")
+    private LocalDate lastMaintenanceDate;
 
     private LocalDate purchaseDate;
 
-    // Un utilaj aparține unei ferme, nu unui utilizator individual
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farm_id", nullable = false)
     @JsonIgnore
     private Farm farm;
+
+    @OneToMany(mappedBy = "machinery", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties("machinery") // Previne serializarea recursiva
+    private List<MaintenanceLog> maintenanceLogs = new ArrayList<>();
 }

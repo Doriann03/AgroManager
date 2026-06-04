@@ -3,9 +3,7 @@ package agro.backend.service;
 import agro.backend.model.Machinery;
 import agro.backend.model.User;
 import agro.backend.repository.MachineryRepository;
-import agro.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,7 +13,6 @@ import java.util.List;
 public class MachineryService {
 
     private final MachineryRepository machineryRepository;
-    private final UserRepository userRepository;
 
     public List<Machinery> getMachineryByFarm(Long farmId) {
         return machineryRepository.findAllByFarmId(farmId);
@@ -41,9 +38,15 @@ public class MachineryService {
         existingMachinery.setType(updatedMachinery.getType());
         existingMachinery.setModel(updatedMachinery.getModel());
         existingMachinery.setLicensePlate(updatedMachinery.getLicensePlate());
-        existingMachinery.setWorkHours(updatedMachinery.getWorkHours());
+        existingMachinery.setTotalHours(updatedMachinery.getTotalHours());
         existingMachinery.setStatus(updatedMachinery.getStatus());
         existingMachinery.setPurchaseDate(updatedMachinery.getPurchaseDate());
+        existingMachinery.setMaintenanceIntervalHours(updatedMachinery.getMaintenanceIntervalHours());
+        
+        // La prima setare a intervalului, calculăm și următoarea revizie
+        if (existingMachinery.getNextMaintenanceHours() == null && updatedMachinery.getTotalHours() != null && updatedMachinery.getMaintenanceIntervalHours() != null) {
+            existingMachinery.setNextMaintenanceHours(updatedMachinery.getTotalHours() + updatedMachinery.getMaintenanceIntervalHours());
+        }
 
         return machineryRepository.save(existingMachinery);
     }
