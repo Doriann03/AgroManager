@@ -14,7 +14,7 @@ const Login = () => {
 
         try {
             const response = await apiClient.post('/api/auth/login', {
-                username: username,
+                username: username.trim(),
                 password: password
             });
 

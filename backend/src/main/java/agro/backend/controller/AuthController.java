@@ -36,9 +36,10 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest, HttpServletRequest request) {
+        String username = loginRequest.getUsername() != null ? loginRequest.getUsername().trim() : "";
 
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword())
+                new UsernamePasswordAuthenticationToken(username, loginRequest.getPassword())
         );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -60,15 +61,18 @@ public class AuthController {
     @PostMapping("/register")
     @Transactional
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
-        if (userRepository.existsByUsername(registerRequest.getUsername())) {
+        String username = registerRequest.getUsername() != null ? registerRequest.getUsername().trim() : "";
+        String email = registerRequest.getEmail() != null ? registerRequest.getEmail().trim() : null;
+
+        if (userRepository.existsByUsername(username)) {
             return ResponseEntity.badRequest().body("Eroare: Numele de utilizator este deja folosit!");
         }
 
         // 1. Creăm și salvăm utilizatorul (managerul) FĂRĂ fermă
         User manager = new User();
-        manager.setUsername(registerRequest.getUsername());
+        manager.setUsername(username);
         manager.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        manager.setEmail(registerRequest.getEmail());
+        manager.setEmail(email);
         manager.setRole(UserRole.FARM_MANAGER);
         User savedManager = userRepository.save(manager);
 
@@ -76,7 +80,7 @@ public class AuthController {
         Farm farm = new Farm();
         farm.setName(registerRequest.getFarmName());
         farm.setAddress(registerRequest.getFarmAddress());
-        farm.setContactEmail(registerRequest.getFarmContactEmail() != null ? registerRequest.getFarmContactEmail() : registerRequest.getEmail());
+        farm.setContactEmail(registerRequest.getFarmContactEmail() != null ? registerRequest.getFarmContactEmail().trim() : email);
         farm.setCreatedBy(savedManager);
         Farm savedFarm = farmRepository.save(farm);
 

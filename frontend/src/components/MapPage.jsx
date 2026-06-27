@@ -109,6 +109,12 @@ const getCropColor = (cropType, isSelected) => {
     }
 };
 
+function getColorForNDVI(ndvi) {
+    if (ndvi < 0.1) return "#FFFF00"; // Galben - sol golaș/stres
+    if (ndvi < 0.5) return "#32CD32"; // Verde deschis - vegetație medie
+    return "#006400"; // Verde închis - biomasă maximă
+}
+
 // --- Funcție Helper pentru Status Activitate ---
 const getStatusBadge = (status) => {
     switch(status) {
@@ -166,6 +172,11 @@ const MapPage = () => {
     const [weatherData, setWeatherData] = useState(null);
     const [isLoadingWeather, setIsLoadingWeather] = useState(false);
     const [weatherError, setWeatherError] = useState('');
+
+    // --- State-uri pentru NDVI Widget ---
+    const [selectedPeriod, setSelectedPeriod] = useState("2026-05");
+    const [ndviData, setNdviData] = useState(null);
+    const [isNdviLoading, setIsNdviLoading] = useState(false);
 
     const mapRef = useRef(null);
     const selectedParcelIdRef = useRef(null);
@@ -330,6 +341,25 @@ const MapPage = () => {
         setError('');
     };
 
+    const fetchNdvi = async (parcelId, period) => {
+        setIsNdviLoading(true);
+        try {
+            const res = await apiClient.get(`/api/ndvi/parcel/${parcelId}?period=${period}`);
+            setNdviData(res.data);
+        } catch (e) {
+            console.error("Eroare preluare NDVI:", e);
+            setNdviData(null);
+        } finally {
+            setIsNdviLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedParcel && isSidebarOpen) {
+            fetchNdvi(selectedParcel.id, selectedPeriod);
+        }
+    }, [selectedPeriod]);
+
     const handleParcelClick = (parcel) => {
         setSelectedParcel(parcel);
         setIsSidebarOpen(true);
@@ -339,9 +369,11 @@ const MapPage = () => {
         const loadParcelData = async () => {
             await fetchActivitiesForParcel(parcel.id);
             await fetchCropSeasonsForParcel(parcel.id); 
+            await fetchNdvi(parcel.id, selectedPeriod);
         };
         loadParcelData();
     };
+
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
@@ -560,7 +592,11 @@ const MapPage = () => {
                     try {
                         const coordinates = JSON.parse(parcel.coordinatesJson);
                         const isSelected = selectedParcel && selectedParcel.id === parcel.id;
-                        const parcelColor = getCropColor(parcel.cropType, isSelected);
+                        let parcelColor = getCropColor(parcel.cropType, isSelected);
+
+                        if (isSelected && ndviData && ndviData.ndviValue !== undefined) {
+                            parcelColor = getColorForNDVI(ndviData.ndviValue);
+                        }
                         
                         return (
                             <Polygon 
@@ -660,6 +696,45 @@ const MapPage = () => {
                         <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: 'var(--light-gray)', borderRadius: '4px', fontSize: '14px', borderLeft: '4px solid #ffeb3b' }}>
                             <strong>Suprafață calculată (Geoman):</strong> {selectedParcel.areaHectares.toFixed(4)} ha
                         </div>
+
+                        {/* --- WIDGET NDVI --- */}
+                        <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#e8f5e9', borderRadius: '4px', borderLeft: '4px solid #2e7d32' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                <h4 style={{ margin: 0, color: '#2e7d32' }}>🛰️ Analiză NDVI (Satelit)</h4>
+                                {isNdviLoading && <span style={{ fontSize: '12px', color: '#666' }}>Se încarcă...</span>}
+                            </div>
+                            <div style={{ marginBottom: '10px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Alegeți perioada (Time-Lapse):</label>
+                                <select
+                                    value={selectedPeriod}
+                                    onChange={e => setSelectedPeriod(e.target.value)}
+                                    style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', marginTop: '5px' }}
+                                >
+                                    <option value="2026-03">Martie 2026</option>
+                                    <option value="2026-04">Aprilie 2026</option>
+                                    <option value="2026-05">Mai 2026</option>
+                                    <option value="2026-06">Iunie 2026</option>
+                                    <option value="2026-07">Iulie 2026</option>
+                                    <option value="2026-08">August 2026</option>
+                                    <option value="2026-09">Septembrie 2026</option>
+                                    <option value="2026-10">Octombrie 2026</option>
+                                </select>
+                            </div>
+                            {ndviData ? (
+                                <div>
+                                    <div style={{ fontSize: '14px', marginBottom: '5px' }}>
+                                        <strong>Valoare NDVI:</strong> <span style={{ fontSize: '16px', fontWeight: 'bold', color: getColorForNDVI(ndviData.ndviValue) }}>{ndviData.ndviValue.toFixed(2)}</span>
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#666' }}>
+                                        Sursa date: {ndviData.isMockData ? 'Cache / Estimare locală (Fallback)' : 'Live Sentinel Hub API'}
+                                    </div>
+                                </div>
+                            ) : (
+                                !isNdviLoading && <p style={{ fontSize: '12px', color: 'red', margin: 0 }}>Nu s-au putut încărca datele NDVI.</p>
+                            )}
+                        </div>
+                        {/* --- END WIDGET NDVI --- */}
+
 
                         <div style={{ marginBottom: '10px', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>

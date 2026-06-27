@@ -79,7 +79,10 @@ public class FarmService {
             throw new RuntimeException("Managerul nu are o fermă asociată.");
         }
 
-        if (userRepository.existsByUsername(employeeRequest.getUsername())) {
+        String username = employeeRequest.getUsername() != null ? employeeRequest.getUsername().trim() : "";
+        String email = employeeRequest.getEmail() != null ? employeeRequest.getEmail().trim() : null;
+
+        if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Numele de utilizator este deja folosit.");
         }
 
@@ -88,9 +91,9 @@ public class FarmService {
         }
 
         User employee = new User();
-        employee.setUsername(employeeRequest.getUsername());
+        employee.setUsername(username);
         employee.setPassword(passwordEncoder.encode(employeeRequest.getPassword()));
-        employee.setEmail(employeeRequest.getEmail());
+        employee.setEmail(email);
         employee.setRole(employeeRequest.getRole());
         employee.setFarm(manager.getFarm());
 

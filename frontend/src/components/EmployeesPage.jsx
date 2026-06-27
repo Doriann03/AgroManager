@@ -36,7 +36,11 @@ const EmployeesPage = () => {
         e.preventDefault();
         setError('');
         try {
-            await apiClient.post('/api/farms/employees', formData);
+            await apiClient.post('/api/farms/employees', {
+                ...formData,
+                username: formData.username.trim(),
+                email: formData.email.trim()
+            });
             resetForm();
             await fetchEmployees();
         } catch (err) {

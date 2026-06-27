@@ -6,6 +6,7 @@ import agro.backend.repository.UserRepository;
 import agro.backend.service.MachineryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +30,7 @@ public class MachineryController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST', 'SUPER_ADMIN')")
     public ResponseEntity<List<Machinery>> getMyMachinery(Principal principal) {
         User currentUser = getCurrentUser(principal);
         if (currentUser.getFarm() == null) {
@@ -39,6 +41,7 @@ public class MachineryController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('FARM_MANAGER')")
     public ResponseEntity<Machinery> create(@RequestBody Machinery machinery, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
@@ -50,6 +53,7 @@ public class MachineryController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('FARM_MANAGER')")
     public ResponseEntity<Machinery> update(@PathVariable Long id, @RequestBody Machinery machinery, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
@@ -61,6 +65,7 @@ public class MachineryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('FARM_MANAGER')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         // Aici ar trebui adăugată o verificare de securitate similară cu update/save
         machineryService.deleteMachinery(id);

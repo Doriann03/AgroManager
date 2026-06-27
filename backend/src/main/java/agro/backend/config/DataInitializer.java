@@ -22,6 +22,8 @@ public class DataInitializer {
     @Bean
     public CommandLineRunner initData() {
         return args -> {
+            normalizeExistingUsernames();
+
             // SUPER_ADMIN (fără fermă)
             if (userRepository.findByUsername("admin").isEmpty()) {
                 User admin = new User();
@@ -87,5 +89,28 @@ public class DataInitializer {
                 }
             }
         };
+    }
+
+    private void normalizeExistingUsernames() {
+        userRepository.findAll().forEach(user -> {
+            String username = user.getUsername();
+            if (username == null) {
+                return;
+            }
+
+            String normalizedUsername = username.trim();
+            if (normalizedUsername.isEmpty() || normalizedUsername.equals(username)) {
+                return;
+            }
+
+            if (userRepository.existsByUsername(normalizedUsername)) {
+                System.out.println(">>> Username cu spatii pastrat din cauza unei coliziuni: '" + username + "'");
+                return;
+            }
+
+            user.setUsername(normalizedUsername);
+            userRepository.save(user);
+            System.out.println(">>> Username normalizat: '" + username + "' -> '" + normalizedUsername + "'");
+        });
     }
 }
