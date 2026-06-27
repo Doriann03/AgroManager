@@ -8,6 +8,7 @@ import agro.backend.service.ActivityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,6 +39,7 @@ public class ActivityController {
     }
 
     @GetMapping("/my-tasks")
+    @PreAuthorize("hasRole('WORKER')")
     public ResponseEntity<List<Activity>> getMyTasks(Principal principal) {
         User currentUser = getCurrentUser(principal);
         List<Activity> activities = activityService.getActivitiesByWorkerId(currentUser.getId());
@@ -45,6 +47,7 @@ public class ActivityController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<List<Activity>> getAllActivities(Principal principal) {
         User currentUser = getCurrentUser(principal);
         if (currentUser.getFarm() == null) {
@@ -55,6 +58,7 @@ public class ActivityController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('WORKER')")
     public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> body, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
@@ -85,6 +89,7 @@ public class ActivityController {
     }
 
     @GetMapping("/parcel/{parcelId}")
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<List<Activity>> getActivitiesForParcel(@PathVariable Long parcelId, Principal principal) {
         User currentUser = getCurrentUser(principal);
         List<Activity> activities = activityService.getActivitiesByParcelId(parcelId, currentUser);
@@ -92,6 +97,7 @@ public class ActivityController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('AGRONOMIST')")
     public ResponseEntity<Activity> createActivity(@Valid @RequestBody ActivityRequestDTO activityRequest, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {

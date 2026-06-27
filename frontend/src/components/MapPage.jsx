@@ -6,28 +6,29 @@ import '@geoman-io/leaflet-geoman-free';
 import * as turf from '@turf/turf';
 import 'leaflet/dist/leaflet.css';
 
-const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, mapRef, selectedParcel, setSelectedParcel, isReadOnly }) => {
+const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, mapRef, selectedParcel, setSelectedParcel, canCreateParcels, canEditParcels }) => {
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
 
         if (map.pm) {
-            if (isReadOnly) {
+            if (!canCreateParcels && !canEditParcels) {
                 map.pm.removeControls();
                 return;
             }
 
             map.pm.addControls({
                 position: 'topleft',
+                drawPolygon: canCreateParcels,
                 drawCircle: false,
                 drawMarker: false,
                 drawCircleMarker: false,
                 drawPolyline: false,
                 drawRectangle: false,
                 cutPolygon: false,
-                editMode: true,
-                dragMode: true,
-                removalMode: true,
+                editMode: canEditParcels,
+                dragMode: canEditParcels,
+                removalMode: canEditParcels,
             });
 
             const handleCreate = (e) => {
@@ -60,6 +61,7 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
             map.on('pm:create', handleCreate);
 
             const handleGlobalEdit = (e) => {
+                if (!canEditParcels) return;
                 if (selectedParcel && e.layer) {
                     const editedLayer = e.layer;
                     const editedGeoJson = editedLayer.toGeoJSON();
@@ -89,7 +91,7 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
                 }
             };
         }
-    }, [mapRef, setDrawnLayer, setCalculatedArea, setShowSaveForm, selectedParcel, setSelectedParcel]);
+    }, [mapRef, setDrawnLayer, setCalculatedArea, setShowSaveForm, selectedParcel, setSelectedParcel, canCreateParcels, canEditParcels]);
 
     return null;
 };
@@ -158,6 +160,9 @@ const MapPage = () => {
     const user = JSON.parse(localStorage.getItem('user'));
     const userRole = user?.role;
     const isManager = userRole === 'FARM_MANAGER';
+    const isAgronomist = userRole === 'AGRONOMIST';
+    const canCreateParcels = isManager || isAgronomist;
+    const canEditParcels = isAgronomist;
 
     const [parcels, setParcels] = useState([]);
     const [machineryList, setMachineryList] = useState([]); 
@@ -632,7 +637,8 @@ const MapPage = () => {
                     mapRef={mapRef}
                     selectedParcel={selectedParcel}
                     setSelectedParcel={setSelectedParcel}
-                    isReadOnly={isManager}
+                    canCreateParcels={canCreateParcels}
+                    canEditParcels={canEditParcels}
                 />
 
                 {parcels.map(parcel => {
@@ -657,7 +663,7 @@ const MapPage = () => {
                                 eventHandlers={{
                                     click: () => handleParcelClick(parcel),
                                     'pm:edit': (e) => {
-                                        if (isManager) return;
+                                        if (!canEditParcels) return;
                                         const editedLayer = e.layer;
                                         const editedGeoJson = editedLayer.toGeoJSON();
                                         const newAreaInHectares = turf.area(editedGeoJson) / 10000;
@@ -687,7 +693,7 @@ const MapPage = () => {
                 })}
             </MapContainer>
 
-            {(showSaveForm && !isManager) && (
+            {(showSaveForm && canCreateParcels) && (
                 <div style={{ position: 'absolute', top: '70px', left: '60px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', width: '280px' }}>
                     <h3 style={{marginTop: 0, color: 'var(--primary-green)'}}>Tarla Nouă</h3>
                     <div style={{ marginBottom: '10px' }}>

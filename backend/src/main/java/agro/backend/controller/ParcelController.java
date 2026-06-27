@@ -39,6 +39,7 @@ public class ParcelController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<List<Parcel>> getMyParcels(Principal principal) {
         User currentUser = getCurrentUser(principal);
         if (currentUser.getFarm() == null) {
@@ -61,7 +62,7 @@ public class ParcelController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
+    @PreAuthorize("hasRole('AGRONOMIST')")
     public ResponseEntity<Parcel> update(@PathVariable Long id, @Valid @RequestBody ParcelRequestDTO parcel, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
@@ -73,7 +74,7 @@ public class ParcelController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
+    @PreAuthorize("hasRole('AGRONOMIST')")
     public ResponseEntity<Void> delete(@PathVariable Long id, Principal principal) {
         User currentUser = getCurrentUser(principal);
         parcelService.deleteParcel(id, currentUser);

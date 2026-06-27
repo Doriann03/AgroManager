@@ -39,6 +39,7 @@ public class InventoryController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<List<InventoryItem>> getMyInventory(Principal principal) {
         User currentUser = getCurrentUser(principal);
         if (currentUser.getFarm() == null) {
