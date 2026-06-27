@@ -20,8 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,10 @@ public class NdviService {
 
     @SuppressWarnings("unchecked")
     private synchronized String getAccessToken() {
+        if (!StringUtils.hasText(clientId) || !StringUtils.hasText(clientSecret)) {
+            throw new RuntimeException("Credentialele Sentinel Hub lipsesc. Setati SENTINEL_HUB_CLIENT_ID si SENTINEL_HUB_CLIENT_SECRET.");
+        }
+
         long now = System.currentTimeMillis() / 1000;
         if (cachedToken != null && now < (tokenExpiresAtEpoch - TOKEN_MARGIN_SECONDS)) {
             logger.debug("Reutilizam token-ul OAuth2 din cache.");
@@ -108,7 +114,21 @@ public class NdviService {
             String geoJsonGeometry = convertToGeoJsonGeometry(coordinatesJson);
 
             YearMonth yearMonth = YearMonth.parse(periodKey);
-            String lastDayOfMonth = String.valueOf(yearMonth.atEndOfMonth().getDayOfMonth());
+            if (yearMonth.isAfter(YearMonth.now())) {
+                logger.info("Perioada {} este in viitor. Folosim estimare sezoniera fara apel Sentinel Hub.", periodKey);
+                Double mockValue = generateMockNdviValue(periodKey);
+
+                history.setParcelId(parcelId);
+                history.setPeriodKey(periodKey);
+                history.setNdviValue(mockValue);
+                history.setIsMockData(true);
+
+                return withSource(ndviHistoryRepository.save(history), "FUTURE_ESTIMATE");
+            }
+
+            LocalDate endDate = yearMonth.equals(YearMonth.now())
+                    ? LocalDate.now()
+                    : yearMonth.atEndOfMonth();
 
             String evalscript = buildEvalscript();
 
@@ -130,15 +150,15 @@ public class NdviService {
                   "aggregation": {
                     "timeRange": {
                       "from": "%s-01T00:00:00Z",
-                      "to": "%s-%sT23:59:59Z"
+                      "to": "%sT23:59:59Z"
                     },
                     "aggregationInterval": {
-                      "of": "P30D"
+                      "of": "P1D"
                     },
                     "evalscript": "%s"
                   }
                 }
-                """.formatted(geoJsonGeometry, periodKey, periodKey, lastDayOfMonth, escapeJsonString(evalscript));
+                """.formatted(geoJsonGeometry, periodKey, endDate, escapeJsonString(evalscript));
 
             String accessToken = getAccessToken();
 
@@ -159,14 +179,14 @@ public class NdviService {
             history.setIsMockData(false);
 
             logger.info("NDVI live de la Sentinel Hub API pentru parcela {} si perioada {}: {}", parcelId, periodKey, actualNdvi);
-            return ndviHistoryRepository.save(history);
+            return withSource(ndviHistoryRepository.save(history), "LIVE");
 
         } catch (Exception e) {
             logger.warn("Eroare API Satelit: {}", e.getMessage());
 
             if (existingHistoryOpt.isPresent()) {
                 logger.info("Folosim valoarea salvata in baza de date (Fallback) pentru parcela {} siperioada {}", parcelId, periodKey);
-                return existingHistoryOpt.get();
+                return withSource(existingHistoryOpt.get(), sourceForFallback(periodKey));
             }
 
             logger.info("Nu exista date in DB. Generam valoare de rezerva (Mock) pentru parcela {} siperioada {}", parcelId, periodKey);
@@ -177,8 +197,27 @@ public class NdviService {
             history.setNdviValue(mockValue);
             history.setIsMockData(true);
 
-            return ndviHistoryRepository.save(history);
+            return withSource(ndviHistoryRepository.save(history), sourceForFallback(periodKey));
         }
+    }
+
+    private String sourceForFallback(String periodKey) {
+        YearMonth period = YearMonth.parse(periodKey);
+        if (period.isAfter(YearMonth.now())) {
+            return "FUTURE_ESTIMATE";
+        }
+        return "SATELLITE_UNAVAILABLE";
+    }
+
+    private ParcelNdviHistory withSource(ParcelNdviHistory history, String source) {
+        history.setDataSource(source);
+        history.setDataSourceLabel(switch (source) {
+            case "LIVE" -> "Live Sentinel Hub API";
+            case "FUTURE_ESTIMATE" -> "Estimare sezoniera - perioada viitoare";
+            case "SATELLITE_UNAVAILABLE" -> "Estimare locala - date satelitare indisponibile";
+            default -> "Estimare locala";
+        });
+        return history;
     }
 
     @SuppressWarnings("unchecked")
@@ -247,42 +286,75 @@ public class NdviService {
                 throw new RuntimeException("Lista 'data' este goala.");
             }
 
-            Map<String, Object> firstDataObj = dataList.get(0);
-            Map<String, Object> outputs = (Map<String, Object>) firstDataObj.get("outputs");
-            if (outputs == null) {
-                throw new RuntimeException("Nu exista 'outputs' in raspuns.");
-            }
+            double sum = 0;
+            int validIntervals = 0;
 
-            Map<String, Object> ndvi = (Map<String, Object>) outputs.get("ndvi");
-            if (ndvi == null) {
-                throw new RuntimeException("Nu exista output 'ndvi' in raspuns.");
-            }
-
-            Map<String, Object> statistics = (Map<String, Object>) ndvi.get("statistics");
-            if (statistics != null) {
-                Map<String, Object> def = (Map<String, Object>) statistics.get("default");
-                if (def != null && def.containsKey("median")) {
-                    Object medianObj = def.get("median");
-                    if (medianObj instanceof Number) return ((Number) medianObj).doubleValue();
+            for (Map<String, Object> dataObj : dataList) {
+                Double value = extractNdviFromDataObject(dataObj);
+                if (value != null) {
+                    sum += value;
+                    validIntervals++;
                 }
             }
 
-            Map<String, Object> bands = (Map<String, Object>) ndvi.get("bands");
-            if (bands != null) {
-                Map<String, Object> b0 = (Map<String, Object>) bands.get("B0");
-                if (b0 != null) {
-                    Map<String, Object> stats = (Map<String, Object>) b0.get("stats");
-                    if (stats != null && stats.containsKey("median")) {
-                        Object medianObj = stats.get("median");
-                        if (medianObj instanceof Number) return ((Number) medianObj).doubleValue();
-                    }
-                }
+            if (validIntervals > 0) {
+                double monthlyAverage = sum / validIntervals;
+                logger.info("NDVI calculat din {} intervale Sentinel valide.", validIntervals);
+                return monthlyAverage;
             }
 
-            throw new RuntimeException("Nu s-a gasit valoarea NDVI (median) in structura raspunsului.");
+            throw new RuntimeException("Nu s-a gasit valoarea NDVI (mean/median) in structura raspunsului.");
         } catch (ClassCastException e) {
             throw new RuntimeException("Structura raspunsului API nu este asteptata: " + e.getMessage(), e);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Double extractNdviFromDataObject(Map<String, Object> dataObj) {
+        Map<String, Object> outputs = (Map<String, Object>) dataObj.get("outputs");
+        if (outputs == null) {
+            return null;
+        }
+
+        Map<String, Object> ndvi = (Map<String, Object>) outputs.get("ndvi");
+        if (ndvi == null) {
+            return null;
+        }
+
+        Map<String, Object> bands = (Map<String, Object>) ndvi.get("bands");
+        if (bands != null) {
+            Map<String, Object> b0 = (Map<String, Object>) bands.get("B0");
+            if (b0 != null) {
+                Map<String, Object> stats = (Map<String, Object>) b0.get("stats");
+                Double value = firstNumericValue(stats, "mean", "median", "max", "min");
+                if (value != null) {
+                    return value;
+                }
+            }
+        }
+
+        Map<String, Object> statistics = (Map<String, Object>) ndvi.get("statistics");
+        if (statistics != null) {
+            Map<String, Object> def = (Map<String, Object>) statistics.get("default");
+            return firstNumericValue(def, "mean", "median", "max", "min");
+        }
+
+        return null;
+    }
+
+    private Double firstNumericValue(Map<String, Object> stats, String... keys) {
+        if (stats == null) {
+            return null;
+        }
+
+        for (String key : keys) {
+            Object value = stats.get(key);
+            if (value instanceof Number) {
+                return ((Number) value).doubleValue();
+            }
+        }
+
+        return null;
     }
 
     private Double generateMockNdviValue(String periodKey) {

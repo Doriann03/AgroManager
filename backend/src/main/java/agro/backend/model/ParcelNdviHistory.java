@@ -30,4 +30,10 @@ public class ParcelNdviHistory {
 
     @Column(name = "is_mock_data", nullable = false)
     private Boolean isMockData;
+
+    @Transient
+    private String dataSource;
+
+    @Transient
+    private String dataSourceLabel;
 }

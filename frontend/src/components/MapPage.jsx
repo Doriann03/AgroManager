@@ -115,6 +115,36 @@ function getColorForNDVI(ndvi) {
     return "#006400"; // Verde închis - biomasă maximă
 }
 
+const ndviMonths = [
+    { value: '03', label: 'Martie' },
+    { value: '04', label: 'Aprilie' },
+    { value: '05', label: 'Mai' },
+    { value: '06', label: 'Iunie' },
+    { value: '07', label: 'Iulie' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'Septembrie' },
+    { value: '10', label: 'Octombrie' },
+];
+
+const getDefaultNdviPeriod = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const seasonMonth = Math.min(10, Math.max(3, currentMonth));
+    return `${now.getFullYear()}-${String(seasonMonth).padStart(2, '0')}`;
+};
+
+const getNdviYears = () => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, index) => currentYear - index);
+};
+
+const isFutureNdviPeriod = (year, month) => {
+    const now = new Date();
+    const period = new Date(Number(year), Number(month) - 1, 1);
+    const currentPeriod = new Date(now.getFullYear(), now.getMonth(), 1);
+    return period > currentPeriod;
+};
+
 // --- Funcție Helper pentru Status Activitate ---
 const getStatusBadge = (status) => {
     switch(status) {
@@ -174,7 +204,7 @@ const MapPage = () => {
     const [weatherError, setWeatherError] = useState('');
 
     // --- State-uri pentru NDVI Widget ---
-    const [selectedPeriod, setSelectedPeriod] = useState("2026-05");
+    const [selectedPeriod, setSelectedPeriod] = useState(getDefaultNdviPeriod());
     const [ndviData, setNdviData] = useState(null);
     const [isNdviLoading, setIsNdviLoading] = useState(false);
 
@@ -352,6 +382,17 @@ const MapPage = () => {
         } finally {
             setIsNdviLoading(false);
         }
+    };
+
+    const selectedNdviYear = selectedPeriod.split('-')[0];
+    const selectedNdviMonth = selectedPeriod.split('-')[1];
+
+    const handleNdviYearChange = (year) => {
+        setSelectedPeriod(`${year}-${selectedNdviMonth}`);
+    };
+
+    const handleNdviMonthChange = (month) => {
+        setSelectedPeriod(`${selectedNdviYear}-${month}`);
     };
 
     useEffect(() => {
@@ -705,20 +746,28 @@ const MapPage = () => {
                             </div>
                             <div style={{ marginBottom: '10px' }}>
                                 <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Alegeți perioada (Time-Lapse):</label>
-                                <select
-                                    value={selectedPeriod}
-                                    onChange={e => setSelectedPeriod(e.target.value)}
-                                    style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc', marginTop: '5px' }}
-                                >
-                                    <option value="2026-03">Martie 2026</option>
-                                    <option value="2026-04">Aprilie 2026</option>
-                                    <option value="2026-05">Mai 2026</option>
-                                    <option value="2026-06">Iunie 2026</option>
-                                    <option value="2026-07">Iulie 2026</option>
-                                    <option value="2026-08">August 2026</option>
-                                    <option value="2026-09">Septembrie 2026</option>
-                                    <option value="2026-10">Octombrie 2026</option>
-                                </select>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '5px' }}>
+                                    <select
+                                        value={selectedNdviYear}
+                                        onChange={e => handleNdviYearChange(e.target.value)}
+                                        style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                    >
+                                        {getNdviYears().map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={selectedNdviMonth}
+                                        onChange={e => handleNdviMonthChange(e.target.value)}
+                                        style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #ccc' }}
+                                    >
+                                        {ndviMonths.map(month => (
+                                            <option key={month.value} value={month.value}>
+                                                {month.label}{isFutureNdviPeriod(selectedNdviYear, month.value) ? ' (estimare)' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             {ndviData ? (
                                 <div>
@@ -726,7 +775,7 @@ const MapPage = () => {
                                         <strong>Valoare NDVI:</strong> <span style={{ fontSize: '16px', fontWeight: 'bold', color: getColorForNDVI(ndviData.ndviValue) }}>{ndviData.ndviValue.toFixed(2)}</span>
                                     </div>
                                     <div style={{ fontSize: '11px', color: '#666' }}>
-                                        Sursa date: {ndviData.isMockData ? 'Cache / Estimare locală (Fallback)' : 'Live Sentinel Hub API'}
+                                        Sursa date: {ndviData.dataSourceLabel || (ndviData.isMockData ? 'Estimare locala' : 'Live Sentinel Hub API')}
                                     </div>
                                 </div>
                             ) : (
