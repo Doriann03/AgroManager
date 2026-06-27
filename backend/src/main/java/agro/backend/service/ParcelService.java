@@ -1,21 +1,17 @@
 package agro.backend.service;
 
-import agro.backend.model.Farm;
 import agro.backend.model.Parcel;
 import agro.backend.model.User;
 import agro.backend.repository.ParcelRepository;
-import agro.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class ParcelService {
     private final ParcelRepository parcelRepository;
-    private final UserRepository userRepository;
 
     public List<Parcel> getParcelsByFarm(Long farmId) {
         return parcelRepository.findAllByFarmId(farmId);
@@ -23,7 +19,7 @@ public class ParcelService {
 
     public Parcel saveParcel(Parcel parcel, User user) {
         if (user.getFarm() == null) {
-            throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
+            throw new RuntimeException("Utilizatorul nu este asociat cu nicio ferma.");
         }
         parcel.setFarm(user.getFarm());
         return parcelRepository.save(parcel);
@@ -31,10 +27,10 @@ public class ParcelService {
 
     public Parcel updateParcel(Long id, Parcel updatedParcel, User user) {
         Parcel existingParcel = parcelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Parcela nu a fost găsită."));
-        
+                .orElseThrow(() -> new RuntimeException("Parcela nu a fost gasita."));
+
         if (user.getFarm() == null || !existingParcel.getFarm().getId().equals(user.getFarm().getId())) {
-            throw new RuntimeException("Nu aveți permisiunea de a modifica această parcelă.");
+            throw new RuntimeException("Nu aveti permisiunea de a modifica aceasta parcela.");
         }
 
         existingParcel.setName(updatedParcel.getName());
@@ -45,7 +41,14 @@ public class ParcelService {
         return parcelRepository.save(existingParcel);
     }
 
-    public void deleteParcel(Long id) {
-        parcelRepository.deleteById(id);
+    public void deleteParcel(Long id, User user) {
+        Parcel existingParcel = parcelRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Parcela nu a fost gasita."));
+
+        if (user.getFarm() == null || !existingParcel.getFarm().getId().equals(user.getFarm().getId())) {
+            throw new RuntimeException("Nu aveti permisiunea de a sterge aceasta parcela.");
+        }
+
+        parcelRepository.delete(existingParcel);
     }
 }

@@ -6,8 +6,16 @@ import agro.backend.repository.UserRepository;
 import agro.backend.service.ParcelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 import java.util.List;
@@ -18,28 +26,28 @@ import java.util.List;
 public class ParcelController {
 
     private final ParcelService parcelService;
-    private final UserRepository userRepository; // Injectăm UserRepository pentru a obține User-ul complet
+    private final UserRepository userRepository;
 
-    // Helper method to get the current authenticated user
     private User getCurrentUser(Principal principal) {
         if (principal == null) {
             throw new UsernameNotFoundException("Utilizatorul nu este autentificat.");
         }
         return userRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost găsit: " + principal.getName()));
+                .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost gasit: " + principal.getName()));
     }
 
     @GetMapping
     public ResponseEntity<List<Parcel>> getMyParcels(Principal principal) {
         User currentUser = getCurrentUser(principal);
         if (currentUser.getFarm() == null) {
-            return ResponseEntity.badRequest().body(List.of()); // Utilizatorul nu are o fermă asociată
+            return ResponseEntity.badRequest().body(List.of());
         }
         List<Parcel> parcels = parcelService.getParcelsByFarm(currentUser.getFarm().getId());
         return ResponseEntity.ok(parcels);
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<Parcel> create(@RequestBody Parcel parcel, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
@@ -51,6 +59,7 @@ public class ParcelController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
     public ResponseEntity<Parcel> update(@PathVariable Long id, @RequestBody Parcel parcel, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
@@ -62,8 +71,10 @@ public class ParcelController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) {
-        // Aici ar trebui adăugată o verificare de securitate similară cu update/save
-        parcelService.deleteParcel(id);
+    @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
+    public ResponseEntity<Void> delete(@PathVariable Long id, Principal principal) {
+        User currentUser = getCurrentUser(principal);
+        parcelService.deleteParcel(id, currentUser);
+        return ResponseEntity.noContent().build();
     }
 }

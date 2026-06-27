@@ -40,7 +40,14 @@ public class ActivityService {
     private final CropSeasonRepository cropSeasonRepository;
     private final NotificationService notificationService;
 
-    public List<Activity> getActivitiesByParcelId(Long parcelId) {
+    public List<Activity> getActivitiesByParcelId(Long parcelId, User currentUser) {
+        Parcel parcel = parcelRepository.findById(parcelId)
+                .orElseThrow(() -> new RuntimeException("Parcela nu a fost gasita."));
+
+        if (currentUser.getFarm() == null || !parcel.getFarm().getId().equals(currentUser.getFarm().getId())) {
+            throw new RuntimeException("Nu aveti permisiunea de a vedea activitatile acestei parcele.");
+        }
+
         return activityRepository.findByParcelId(parcelId);
     }
 

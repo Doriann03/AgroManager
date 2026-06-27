@@ -8,10 +8,17 @@ import agro.backend.service.ActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -26,7 +33,7 @@ public class ActivityController {
             throw new UsernameNotFoundException("Utilizatorul nu este autentificat.");
         }
         return userRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost găsit: " + principal.getName()));
+                .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost gasit: " + principal.getName()));
     }
 
     @GetMapping("/my-tasks")
@@ -47,7 +54,7 @@ public class ActivityController {
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body, Principal principal) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> body, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             String newStatus = (String) body.get("status");
@@ -55,20 +62,21 @@ public class ActivityController {
             String endDate = (String) body.get("endDate");
             String comments = (String) body.get("comments");
             Double harvestedYieldKg = null;
-            
+
             Object yieldObj = body.get("harvestedYieldKg");
             if (yieldObj != null && !yieldObj.toString().trim().isEmpty()) {
                 try {
                     harvestedYieldKg = Double.valueOf(yieldObj.toString());
                 } catch (NumberFormatException e) {
-                    return ResponseEntity.badRequest().body("Cantitatea recoltată trebuie să fie un număr valid.");
+                    return ResponseEntity.badRequest().body("Cantitatea recoltata trebuie sa fie un numar valid.");
                 }
             }
 
             if (newStatus == null) {
-                return ResponseEntity.badRequest().body("Statusul lipsește.");
+                return ResponseEntity.badRequest().body("Statusul lipseste.");
             }
-            Activity updatedActivity = activityService.updateActivityStatus(id, newStatus, startDate, endDate, comments, harvestedYieldKg, currentUser);
+            Activity updatedActivity = activityService.updateActivityStatus(
+                    id, newStatus, startDate, endDate, comments, harvestedYieldKg, currentUser);
             return ResponseEntity.ok(updatedActivity);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -77,8 +85,8 @@ public class ActivityController {
 
     @GetMapping("/parcel/{parcelId}")
     public ResponseEntity<List<Activity>> getActivitiesForParcel(@PathVariable Long parcelId, Principal principal) {
-        // Aici ar trebui adăugată o verificare de securitate pentru a asigura că utilizatorul are acces la parcela respectivă
-        List<Activity> activities = activityService.getActivitiesByParcelId(parcelId);
+        User currentUser = getCurrentUser(principal);
+        List<Activity> activities = activityService.getActivitiesByParcelId(parcelId, currentUser);
         return ResponseEntity.ok(activities);
     }
 

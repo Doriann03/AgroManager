@@ -23,20 +23,28 @@ public class CropSeasonService {
     private final UserRepository userRepository;
 
     public List<CropSeasonResponseDTO> getSeasonsByParcelId(Long parcelId, String username) {
-        // În viitor se poate adăuga validare de acces la fermă aici
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost gasit."));
+
+        Parcel parcel = parcelRepository.findById(parcelId)
+                .orElseThrow(() -> new RuntimeException("Parcela nu a fost gasita."));
+
+        if (currentUser.getFarm() == null || !parcel.getFarm().getId().equals(currentUser.getFarm().getId())) {
+            throw new RuntimeException("Nu aveti permisiunea de a vedea sezoanele acestei parcele.");
+        }
+
         List<CropSeason> seasons = cropSeasonRepository.findByParcelIdOrderByHarvestYearDesc(parcelId);
         return seasons.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     public List<CropSeasonResponseDTO> getAllSeasonsForFarm(String username) {
         User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost găsit."));
+                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost gasit."));
 
         if (currentUser.getFarm() == null) {
-            throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
+            throw new RuntimeException("Utilizatorul nu este asociat cu nicio ferma.");
         }
 
-        // Am nevoie de o metoda in repository pentru asta
         return cropSeasonRepository.findAllByParcelFarmId(currentUser.getFarm().getId())
                 .stream()
                 .map(this::mapToDTO)
@@ -45,17 +53,17 @@ public class CropSeasonService {
 
     public CropSeasonResponseDTO addSeason(CropSeasonRequestDTO dto, String username) {
         User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost găsit."));
+                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost gasit."));
 
         if (currentUser.getFarm() == null) {
-            throw new RuntimeException("Utilizatorul nu este asociat cu nicio fermă.");
+            throw new RuntimeException("Utilizatorul nu este asociat cu nicio ferma.");
         }
 
         Parcel parcel = parcelRepository.findById(dto.getParcelId())
-                .orElseThrow(() -> new RuntimeException("Parcela nu a fost găsită."));
-                
+                .orElseThrow(() -> new RuntimeException("Parcela nu a fost gasita."));
+
         if (!parcel.getFarm().getId().equals(currentUser.getFarm().getId())) {
-            throw new RuntimeException("Nu aveți permisiunea de a modifica această parcelă.");
+            throw new RuntimeException("Nu aveti permisiunea de a modifica aceasta parcela.");
         }
 
         CropSeason season = new CropSeason();
@@ -65,34 +73,36 @@ public class CropSeasonService {
         season.setTotalYieldKg(dto.getTotalYieldKg());
 
         CropSeason savedSeason = cropSeasonRepository.save(season);
-        
+
         return mapToDTO(savedSeason);
     }
 
     public CropSeasonResponseDTO updateSeason(Long seasonId, CropSeasonRequestDTO dto, String username) {
         User currentUser = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost găsit."));
+                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost gasit."));
 
         CropSeason season = cropSeasonRepository.findById(seasonId)
-                .orElseThrow(() -> new RuntimeException("Sezonul nu a fost găsit."));
+                .orElseThrow(() -> new RuntimeException("Sezonul nu a fost gasit."));
 
         if (currentUser.getFarm() == null || !season.getParcel().getFarm().getId().equals(currentUser.getFarm().getId())) {
-            throw new RuntimeException("Nu aveți permisiunea de a modifica acest sezon.");
+            throw new RuntimeException("Nu aveti permisiunea de a modifica acest sezon.");
         }
 
-        // Putem actualiza doar recolta sau și alte campuri daca e nevoie
         if (dto.getTotalYieldKg() != null) {
             season.setTotalYieldKg(dto.getTotalYieldKg());
         }
-        
-        // Optional: permite actualizarea anului sau culturii daca e necesar
-        if (dto.getHarvestYear() != null) season.setHarvestYear(dto.getHarvestYear());
-        if (dto.getCropType() != null) season.setCropType(dto.getCropType());
+
+        if (dto.getHarvestYear() != null) {
+            season.setHarvestYear(dto.getHarvestYear());
+        }
+        if (dto.getCropType() != null) {
+            season.setCropType(dto.getCropType());
+        }
 
         CropSeason updated = cropSeasonRepository.save(season);
         return mapToDTO(updated);
     }
-    
+
     private CropSeasonResponseDTO mapToDTO(CropSeason season) {
         CropSeasonResponseDTO dto = new CropSeasonResponseDTO();
         dto.setId(season.getId());

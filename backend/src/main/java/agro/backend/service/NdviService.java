@@ -2,6 +2,7 @@ package agro.backend.service;
 
 import agro.backend.model.Parcel;
 import agro.backend.model.ParcelNdviHistory;
+import agro.backend.model.User;
 import agro.backend.repository.ParcelNdviHistoryRepository;
 import agro.backend.repository.ParcelRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -98,9 +99,13 @@ public class NdviService {
     }
 
     @Transactional
-    public ParcelNdviHistory getNdviForParcel(Long parcelId, String periodKey) {
+    public ParcelNdviHistory getNdviForParcel(Long parcelId, String periodKey, User currentUser) {
         Parcel parcel = parcelRepository.findById(parcelId)
                 .orElseThrow(() -> new RuntimeException("Parcela nu a fost gasita."));
+
+        if (currentUser.getFarm() == null || !parcel.getFarm().getId().equals(currentUser.getFarm().getId())) {
+            throw new RuntimeException("Nu aveti permisiunea de a vedea NDVI pentru aceasta parcela.");
+        }
 
         Optional<ParcelNdviHistory> existingHistoryOpt = ndviHistoryRepository.findByParcelIdAndPeriodKey(parcelId, periodKey);
         ParcelNdviHistory history = existingHistoryOpt.orElse(new ParcelNdviHistory());
