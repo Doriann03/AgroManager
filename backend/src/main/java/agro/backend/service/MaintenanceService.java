@@ -3,6 +3,7 @@ package agro.backend.service;
 import agro.backend.model.Machinery;
 import agro.backend.model.MaintenanceLog;
 import agro.backend.model.User;
+import agro.backend.model.dto.MaintenanceLogRequestDTO;
 import agro.backend.repository.MachineryRepository;
 import agro.backend.repository.MaintenanceLogRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class MaintenanceService {
     private final MachineryRepository machineryRepository;
 
     @Transactional
-    public MaintenanceLog addLog(Long machineryId, MaintenanceLog logEntry, User user) {
+    public MaintenanceLog addLog(Long machineryId, MaintenanceLogRequestDTO request, User user) {
         Machinery machinery = machineryRepository.findById(machineryId)
                 .orElseThrow(() -> new RuntimeException("Utilajul nu a fost gasit."));
 
@@ -25,6 +26,11 @@ public class MaintenanceService {
             throw new RuntimeException("Nu aveti permisiunea sa adaugati mentenanta pentru acest utilaj.");
         }
 
+        MaintenanceLog logEntry = new MaintenanceLog();
+        logEntry.setDate(request.getDate());
+        logEntry.setDescription(request.getDescription().trim());
+        logEntry.setCost(request.getCost());
+        logEntry.setHoursAtMaintenance(request.getHoursAtMaintenance());
         logEntry.setMachinery(machinery);
 
         machinery.setLastMaintenanceDate(logEntry.getDate());

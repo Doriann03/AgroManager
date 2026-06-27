@@ -442,15 +442,21 @@ const MapPage = () => {
     const handleAddConsumptionToList = () => {
         if (!selectedInventoryItem || !consumptionQuantity) return;
         
+        const parsedQuantity = parseFloat(consumptionQuantity);
+        if (Number.isNaN(parsedQuantity) || parsedQuantity <= 0) {
+            alert("Cantitatea consumata trebuie sa fie mai mare decat 0.");
+            return;
+        }
+
         const item = inventoryList.find(i => i.id.toString() === selectedInventoryItem);
-        if (item && parseFloat(consumptionQuantity) > item.quantityAvailable) {
+        if (item && parsedQuantity > item.quantityAvailable) {
              alert(`Atenție! Nu aveți suficient stoc. Disponibil: ${item.quantityAvailable} ${item.unitOfMeasure}`);
              return;
         }
 
         const newConsumption = {
             inventoryItemId: parseInt(selectedInventoryItem),
-            quantityUsed: parseFloat(consumptionQuantity),
+            quantityUsed: parsedQuantity,
             itemName: item ? item.name : '',
             unit: item ? item.unitOfMeasure : ''
         };
@@ -989,6 +995,8 @@ const MapPage = () => {
                                                 </select>
                                                 <input 
                                                     type="number" 
+                                                    min="0.01"
+                                                    step="0.01"
                                                     placeholder="Cantitate" 
                                                     value={consumptionQuantity} 
                                                     onChange={e => setConsumptionQuantity(e.target.value)}

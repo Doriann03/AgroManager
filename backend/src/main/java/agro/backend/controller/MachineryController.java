@@ -2,8 +2,10 @@ package agro.backend.controller;
 
 import agro.backend.model.Machinery;
 import agro.backend.model.User;
+import agro.backend.model.dto.MachineryRequestDTO;
 import agro.backend.repository.UserRepository;
 import agro.backend.service.MachineryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,7 +51,7 @@ public class MachineryController {
 
     @PostMapping
     @PreAuthorize("hasRole('FARM_MANAGER')")
-    public ResponseEntity<Machinery> create(@RequestBody Machinery machinery, Principal principal) {
+    public ResponseEntity<Machinery> create(@Valid @RequestBody MachineryRequestDTO machinery, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             Machinery savedMachinery = machineryService.saveMachinery(machinery, currentUser);
@@ -61,7 +63,7 @@ public class MachineryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('FARM_MANAGER')")
-    public ResponseEntity<Machinery> update(@PathVariable Long id, @RequestBody Machinery machinery, Principal principal) {
+    public ResponseEntity<Machinery> update(@PathVariable Long id, @Valid @RequestBody MachineryRequestDTO machinery, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             Machinery updatedMachinery = machineryService.updateMachinery(id, machinery, currentUser);

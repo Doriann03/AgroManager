@@ -35,6 +35,8 @@ public class Activity {
     @Column(length = 1000)
     private String comments;
 
+    private Boolean inventoryDeducted = false;
+
     @ManyToOne
     @JoinColumn(name = "parcel_id")
     private Parcel parcel;

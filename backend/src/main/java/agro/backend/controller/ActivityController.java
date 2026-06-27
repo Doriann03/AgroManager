@@ -5,6 +5,7 @@ import agro.backend.model.User;
 import agro.backend.model.dto.ActivityRequestDTO;
 import agro.backend.repository.UserRepository;
 import agro.backend.service.ActivityService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -91,7 +92,7 @@ public class ActivityController {
     }
 
     @PostMapping
-    public ResponseEntity<Activity> createActivity(@RequestBody ActivityRequestDTO activityRequest, Principal principal) {
+    public ResponseEntity<Activity> createActivity(@Valid @RequestBody ActivityRequestDTO activityRequest, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             Activity savedActivity = activityService.createActivity(activityRequest, currentUser);

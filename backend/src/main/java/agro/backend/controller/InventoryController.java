@@ -2,8 +2,10 @@ package agro.backend.controller;
 
 import agro.backend.model.InventoryItem;
 import agro.backend.model.User;
+import agro.backend.model.dto.InventoryItemRequestDTO;
 import agro.backend.repository.UserRepository;
 import agro.backend.service.InventoryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -47,7 +49,7 @@ public class InventoryController {
 
     @PostMapping
     @PreAuthorize("hasRole('FARM_MANAGER')")
-    public ResponseEntity<InventoryItem> createItem(@RequestBody InventoryItem item, Principal principal) {
+    public ResponseEntity<InventoryItem> createItem(@Valid @RequestBody InventoryItemRequestDTO item, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             return ResponseEntity.ok(inventoryService.saveItem(item, currentUser));
@@ -58,7 +60,7 @@ public class InventoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('FARM_MANAGER')")
-    public ResponseEntity<InventoryItem> updateItem(@PathVariable Long id, @RequestBody InventoryItem item, Principal principal) {
+    public ResponseEntity<InventoryItem> updateItem(@PathVariable Long id, @Valid @RequestBody InventoryItemRequestDTO item, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             InventoryItem updatedItem = inventoryService.updateItem(id, item, currentUser);

@@ -1,7 +1,9 @@
 package agro.backend.service;
 
 import agro.backend.model.Machinery;
+import agro.backend.model.MachineryStatus;
 import agro.backend.model.User;
+import agro.backend.model.dto.MachineryRequestDTO;
 import agro.backend.repository.MachineryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,15 +20,18 @@ public class MachineryService {
         return machineryRepository.findAllByFarmId(farmId);
     }
 
-    public Machinery saveMachinery(Machinery machinery, User user) {
+    public Machinery saveMachinery(MachineryRequestDTO request, User user) {
         if (user.getFarm() == null) {
             throw new RuntimeException("Utilizatorul nu este asociat cu nicio ferma.");
         }
+        Machinery machinery = new Machinery();
+        applyRequest(machinery, request);
+        machinery.setStatus(request.getStatus() != null ? request.getStatus() : MachineryStatus.DISPONIBIL);
         machinery.setFarm(user.getFarm());
         return machineryRepository.save(machinery);
     }
 
-    public Machinery updateMachinery(Long id, Machinery updatedMachinery, User user) {
+    public Machinery updateMachinery(Long id, MachineryRequestDTO request, User user) {
         Machinery existingMachinery = machineryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilajul nu a fost gasit"));
 
@@ -34,19 +39,15 @@ public class MachineryService {
             throw new RuntimeException("Nu aveti permisiunea sa modificati acest utilaj.");
         }
 
-        existingMachinery.setName(updatedMachinery.getName());
-        existingMachinery.setType(updatedMachinery.getType());
-        existingMachinery.setModel(updatedMachinery.getModel());
-        existingMachinery.setLicensePlate(updatedMachinery.getLicensePlate());
-        existingMachinery.setTotalHours(updatedMachinery.getTotalHours());
-        existingMachinery.setStatus(updatedMachinery.getStatus());
-        existingMachinery.setPurchaseDate(updatedMachinery.getPurchaseDate());
-        existingMachinery.setMaintenanceIntervalHours(updatedMachinery.getMaintenanceIntervalHours());
+        applyRequest(existingMachinery, request);
+        if (request.getStatus() != null) {
+            existingMachinery.setStatus(request.getStatus());
+        }
 
         if (existingMachinery.getNextMaintenanceHours() == null
-                && updatedMachinery.getTotalHours() != null
-                && updatedMachinery.getMaintenanceIntervalHours() != null) {
-            existingMachinery.setNextMaintenanceHours(updatedMachinery.getTotalHours() + updatedMachinery.getMaintenanceIntervalHours());
+                && request.getTotalHours() != null
+                && request.getMaintenanceIntervalHours() != null) {
+            existingMachinery.setNextMaintenanceHours(request.getTotalHours() + request.getMaintenanceIntervalHours());
         }
 
         return machineryRepository.save(existingMachinery);
@@ -61,5 +62,22 @@ public class MachineryService {
         }
 
         machineryRepository.delete(existingMachinery);
+    }
+
+    private void applyRequest(Machinery machinery, MachineryRequestDTO request) {
+        machinery.setName(request.getName().trim());
+        machinery.setType(request.getType());
+        machinery.setModel(trimToNull(request.getModel()));
+        machinery.setLicensePlate(trimToNull(request.getLicensePlate()));
+        machinery.setTotalHours(request.getTotalHours());
+        machinery.setPurchaseDate(request.getPurchaseDate());
+        machinery.setMaintenanceIntervalHours(request.getMaintenanceIntervalHours());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        return value.trim();
     }
 }

@@ -105,6 +105,10 @@ public class ActivityService {
             if (comments != null) activity.setComments(comments);
             if (harvestedYieldKg != null) activity.setHarvestedYieldKg(harvestedYieldKg);
 
+            if (status == agro.backend.model.ActivityStatus.COMPLETED) {
+                deductInventoryForCompletedActivity(activity);
+            }
+
             // LOGICA AUTOMATA PENTRU ORELE DE FUNCTIONARE
             if (status == agro.backend.model.ActivityStatus.COMPLETED && activity.getStartDate() != null && activity.getEndDate() != null) {
                 long durationHours = java.time.Duration.between(activity.getStartDate(), activity.getEndDate()).toHours();
@@ -200,6 +204,7 @@ public class ActivityService {
         activity.setStartDate(dto.getStartDate()); 
         activity.setParcel(parcel);
         activity.setMachineries(selectedMachineries);
+        activity.setInventoryDeducted(false);
         
         Set<User> assignedWorkers = new HashSet<>();
         if (dto.getAssignedWorkerIds() == null || dto.getAssignedWorkerIds().isEmpty()) {
@@ -224,14 +229,6 @@ public class ActivityService {
                      throw new RuntimeException("Produsul selectat nu aparține fermei curente!");
                 }
                 
-                if (item.getQuantityAvailable() < consDto.getQuantityUsed()) {
-                    throw new RuntimeException("Stoc insuficient pentru: " + item.getName() + 
-                                               ". Disponibil: " + item.getQuantityAvailable() + item.getUnitOfMeasure());
-                }
-                
-                item.setQuantityAvailable(item.getQuantityAvailable() - consDto.getQuantityUsed());
-                inventoryItemRepository.save(item);
-                
                 ActivityConsumption consumption = new ActivityConsumption();
                 consumption.setActivity(activity);
                 consumption.setInventoryItem(item);
@@ -242,5 +239,32 @@ public class ActivityService {
         }
 
         return activityRepository.save(activity);
+    }
+
+    private void deductInventoryForCompletedActivity(Activity activity) {
+        if (!Boolean.FALSE.equals(activity.getInventoryDeducted())) {
+            return;
+        }
+
+        for (ActivityConsumption consumption : activity.getConsumptions()) {
+            InventoryItem item = inventoryItemRepository.findById(consumption.getInventoryItem().getId())
+                    .orElseThrow(() -> new RuntimeException("Produsul din magazie nu a fost gasit."));
+
+            Double quantityUsed = consumption.getQuantityUsed();
+            if (quantityUsed == null || quantityUsed <= 0) {
+                throw new RuntimeException("Cantitatea consumata trebuie sa fie mai mare decat 0.");
+            }
+
+            double availableQuantity = item.getQuantityAvailable() != null ? item.getQuantityAvailable() : 0;
+            if (availableQuantity < quantityUsed) {
+                throw new RuntimeException("Stoc insuficient pentru: " + item.getName()
+                        + ". Disponibil: " + availableQuantity + item.getUnitOfMeasure());
+            }
+
+            item.setQuantityAvailable(availableQuantity - quantityUsed);
+            inventoryItemRepository.save(item);
+        }
+
+        activity.setInventoryDeducted(true);
     }
 }

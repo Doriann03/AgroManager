@@ -2,8 +2,10 @@ package agro.backend.controller;
 
 import agro.backend.model.Parcel;
 import agro.backend.model.User;
+import agro.backend.model.dto.ParcelRequestDTO;
 import agro.backend.repository.UserRepository;
 import agro.backend.service.ParcelService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,7 +50,7 @@ public class ParcelController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
-    public ResponseEntity<Parcel> create(@RequestBody Parcel parcel, Principal principal) {
+    public ResponseEntity<Parcel> create(@Valid @RequestBody ParcelRequestDTO parcel, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             Parcel savedParcel = parcelService.saveParcel(parcel, currentUser);
@@ -60,7 +62,7 @@ public class ParcelController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
-    public ResponseEntity<Parcel> update(@PathVariable Long id, @RequestBody Parcel parcel, Principal principal) {
+    public ResponseEntity<Parcel> update(@PathVariable Long id, @Valid @RequestBody ParcelRequestDTO parcel, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
             Parcel updatedParcel = parcelService.updateParcel(id, parcel, currentUser);
