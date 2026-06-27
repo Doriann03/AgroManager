@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -72,7 +71,15 @@ public class ActivityService {
     }
 
     @Transactional
-    public Activity updateActivityStatus(Long activityId, String newStatus, String startDateStr, String endDateStr, String comments, Double harvestedYieldKg, User currentUser) {
+    public Activity updateActivityStatus(
+            Long activityId,
+            String newStatus,
+            String startDateStr,
+            String endDateStr,
+            String comments,
+            Double harvestedYieldKg,
+            List<ConsumptionRequestDTO> actualConsumptions,
+            User currentUser) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new RuntimeException("Activitatea nu a fost găsită."));
                 
@@ -106,6 +113,7 @@ public class ActivityService {
             if (harvestedYieldKg != null) activity.setHarvestedYieldKg(harvestedYieldKg);
 
             if (status == agro.backend.model.ActivityStatus.COMPLETED) {
+                applyActualConsumptions(activity, actualConsumptions, currentUser);
                 deductInventoryForCompletedActivity(activity);
             }
 
@@ -239,6 +247,72 @@ public class ActivityService {
         }
 
         return activityRepository.save(activity);
+    }
+
+    private void applyActualConsumptions(Activity activity, List<ConsumptionRequestDTO> actualConsumptions, User currentUser) {
+        if (actualConsumptions == null) {
+            return;
+        }
+
+        if (activity.getConsumptions().isEmpty() && actualConsumptions.isEmpty()) {
+            return;
+        }
+
+        if (activity.getConsumptions().size() != actualConsumptions.size()) {
+            throw new RuntimeException("Trebuie raportata cantitatea reala pentru fiecare consumabil planificat.");
+        }
+
+        Set<Long> reportedConsumptionIds = new HashSet<>();
+        Set<Long> reportedItemIds = new HashSet<>();
+        Long currentFarmId = currentUser.getFarm() != null ? currentUser.getFarm().getId() : null;
+
+        for (ConsumptionRequestDTO actualConsumption : actualConsumptions) {
+            ActivityConsumption plannedConsumption = findPlannedConsumption(
+                    activity,
+                    actualConsumption,
+                    reportedConsumptionIds,
+                    reportedItemIds);
+
+            InventoryItem item = inventoryItemRepository.findById(actualConsumption.getInventoryItemId())
+                    .orElseThrow(() -> new RuntimeException("Produsul din magazie nu a fost gasit."));
+
+            if (currentFarmId == null || item.getFarm() == null || !item.getFarm().getId().equals(currentFarmId)) {
+                throw new RuntimeException("Produsul raportat nu apartine fermei curente.");
+            }
+
+            plannedConsumption.setQuantityUsed(actualConsumption.getQuantityUsed());
+        }
+    }
+
+    private ActivityConsumption findPlannedConsumption(
+            Activity activity,
+            ConsumptionRequestDTO actualConsumption,
+            Set<Long> reportedConsumptionIds,
+            Set<Long> reportedItemIds) {
+        if (actualConsumption.getActivityConsumptionId() != null) {
+            if (!reportedConsumptionIds.add(actualConsumption.getActivityConsumptionId())) {
+                throw new RuntimeException("Acelasi consumabil a fost raportat de mai multe ori.");
+            }
+
+            return activity.getConsumptions().stream()
+                    .filter(consumption -> actualConsumption.getActivityConsumptionId().equals(consumption.getId()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Consumabilul raportat nu face parte din lucrarea planificata."));
+        }
+
+        if (!reportedItemIds.add(actualConsumption.getInventoryItemId())) {
+            throw new RuntimeException("Acelasi consumabil a fost raportat de mai multe ori.");
+        }
+
+        List<ActivityConsumption> matches = activity.getConsumptions().stream()
+                .filter(consumption -> actualConsumption.getInventoryItemId().equals(consumption.getInventoryItem().getId()))
+                .toList();
+
+        if (matches.size() != 1) {
+            throw new RuntimeException("Consumabilul raportat nu face parte din lucrarea planificata.");
+        }
+
+        return matches.get(0);
     }
 
     private void deductInventoryForCompletedActivity(Activity activity) {

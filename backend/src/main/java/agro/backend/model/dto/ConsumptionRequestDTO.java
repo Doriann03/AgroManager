@@ -7,6 +7,8 @@ import lombok.Data;
 @Data
 public class ConsumptionRequestDTO {
 
+    private Long activityConsumptionId;
+
     @NotNull(message = "Produsul consumabil este obligatoriu.")
     private Long inventoryItemId;
 

@@ -94,15 +94,47 @@ class ActivityServiceInventoryWorkflowTests {
         when(userRepository.findByFarmIdAndRoleIn(any(), any())).thenReturn(List.of());
         when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        activityService.updateActivityStatus(activity.getId(), "COMPLETED", null, null, null, null, worker);
+        activityService.updateActivityStatus(activity.getId(), "COMPLETED", null, null, null, null, null, worker);
 
         assertThat(item.getQuantityAvailable()).isEqualTo(400.0);
         assertThat(activity.getInventoryDeducted()).isTrue();
         verify(inventoryItemRepository).save(item);
 
-        activityService.updateActivityStatus(activity.getId(), "COMPLETED", null, null, null, null, worker);
+        activityService.updateActivityStatus(activity.getId(), "COMPLETED", null, null, null, null, null, worker);
 
         assertThat(item.getQuantityAvailable()).isEqualTo(400.0);
+    }
+
+    @Test
+    void completingActivityDeductsActualReportedConsumption() {
+        Farm farm = farm();
+        Parcel parcel = parcel(farm);
+        User worker = worker(farm);
+        InventoryItem item = inventoryItem(farm, 600.0);
+        Activity activity = activityWithConsumption(parcel, worker, item, 200.0);
+
+        ConsumptionRequestDTO actualConsumption = new ConsumptionRequestDTO();
+        actualConsumption.setInventoryItemId(item.getId());
+        actualConsumption.setQuantityUsed(150.0);
+
+        when(activityRepository.findById(activity.getId())).thenReturn(Optional.of(activity));
+        when(inventoryItemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+        when(parcelRepository.findById(parcel.getId())).thenReturn(Optional.of(parcel));
+        when(userRepository.findByFarmIdAndRoleIn(any(), any())).thenReturn(List.of());
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        activityService.updateActivityStatus(
+                activity.getId(),
+                "COMPLETED",
+                null,
+                null,
+                null,
+                null,
+                List.of(actualConsumption),
+                worker);
+
+        assertThat(activity.getConsumptions().get(0).getQuantityUsed()).isEqualTo(150.0);
+        assertThat(item.getQuantityAvailable()).isEqualTo(450.0);
     }
 
     private ActivityRequestDTO activityRequest(Long itemId, Long workerId, Long parcelId, double quantityUsed) {

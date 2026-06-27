@@ -3,6 +3,7 @@ package agro.backend.controller;
 import agro.backend.model.Activity;
 import agro.backend.model.User;
 import agro.backend.model.dto.ActivityRequestDTO;
+import agro.backend.model.dto.ActivityStatusUpdateRequestDTO;
 import agro.backend.repository.UserRepository;
 import agro.backend.service.ActivityService;
 import jakarta.validation.Valid;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -59,29 +59,18 @@ public class ActivityController {
 
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('WORKER')")
-    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> body, Principal principal) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @Valid @RequestBody ActivityStatusUpdateRequestDTO request, Principal principal) {
         User currentUser = getCurrentUser(principal);
         try {
-            String newStatus = (String) body.get("status");
-            String startDate = (String) body.get("startDate");
-            String endDate = (String) body.get("endDate");
-            String comments = (String) body.get("comments");
-            Double harvestedYieldKg = null;
-
-            Object yieldObj = body.get("harvestedYieldKg");
-            if (yieldObj != null && !yieldObj.toString().trim().isEmpty()) {
-                try {
-                    harvestedYieldKg = Double.valueOf(yieldObj.toString());
-                } catch (NumberFormatException e) {
-                    return ResponseEntity.badRequest().body("Cantitatea recoltata trebuie sa fie un numar valid.");
-                }
-            }
-
-            if (newStatus == null) {
-                return ResponseEntity.badRequest().body("Statusul lipseste.");
-            }
             Activity updatedActivity = activityService.updateActivityStatus(
-                    id, newStatus, startDate, endDate, comments, harvestedYieldKg, currentUser);
+                    id,
+                    request.getStatus(),
+                    request.getStartDate(),
+                    request.getEndDate(),
+                    request.getComments(),
+                    request.getHarvestedYieldKg(),
+                    request.getActualConsumptions(),
+                    currentUser);
             return ResponseEntity.ok(updatedActivity);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

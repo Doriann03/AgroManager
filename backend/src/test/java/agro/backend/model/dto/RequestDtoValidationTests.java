@@ -113,6 +113,21 @@ class RequestDtoValidationTests {
         assertThat(fields).anyMatch(field -> field.endsWith("quantityUsed"));
     }
 
+    @Test
+    void activityStatusUpdateRejectsNegativeActualConsumptionQuantity() {
+        ConsumptionRequestDTO consumption = new ConsumptionRequestDTO();
+        consumption.setInventoryItemId(1L);
+        consumption.setQuantityUsed(-10.0);
+
+        ActivityStatusUpdateRequestDTO request = new ActivityStatusUpdateRequestDTO();
+        request.setStatus("COMPLETED");
+        request.setActualConsumptions(List.of(consumption));
+
+        Set<String> fields = invalidFields(request);
+
+        assertThat(fields).anyMatch(field -> field.endsWith("quantityUsed"));
+    }
+
     private Set<String> invalidFields(Object request) {
         return validator.validate(request)
                 .stream()

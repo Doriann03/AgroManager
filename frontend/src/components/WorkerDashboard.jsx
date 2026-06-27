@@ -13,7 +13,8 @@ const WorkerDashboard = () => {
         startDate: '',
         endDate: '',
         comments: '',
-        harvestedYieldKg: ''
+        harvestedYieldKg: '',
+        actualConsumptions: []
     });
 
     const activityTypeLabels = {
@@ -50,12 +51,23 @@ const WorkerDashboard = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
         const defaultTime = now.toISOString().slice(0, 16);
+        const plannedConsumptions = (task.consumptions || [])
+            .filter(cons => cons.inventoryItem?.id)
+            .map(cons => ({
+                activityConsumptionId: cons.id,
+                inventoryItemId: cons.inventoryItem.id,
+                itemName: cons.inventoryItem.name,
+                unitOfMeasure: cons.inventoryItem.unitOfMeasure,
+                plannedQuantity: cons.quantityUsed,
+                quantityUsed: cons.quantityUsed
+            }));
         
         setReportData({
             startDate: task.startDate ? task.startDate.slice(0, 16) : defaultTime,
             endDate: defaultTime,
             comments: '',
-            harvestedYieldKg: ''
+            harvestedYieldKg: '',
+            actualConsumptions: plannedConsumptions
         });
     };
 
@@ -78,9 +90,24 @@ const WorkerDashboard = () => {
 
     const handleSubmitReport = async (taskId) => {
         try {
+            const actualConsumptions = reportData.actualConsumptions.map(consumption => ({
+                activityConsumptionId: consumption.activityConsumptionId,
+                inventoryItemId: consumption.inventoryItemId,
+                quantityUsed: parseFloat(consumption.quantityUsed)
+            }));
+
+            if (actualConsumptions.some(consumption => Number.isNaN(consumption.quantityUsed) || consumption.quantityUsed <= 0)) {
+                alert("Cantitatile consumate trebuie sa fie mai mari decat 0.");
+                return;
+            }
+
             await apiClient.put(`/api/activities/${taskId}/status`, {
                 status: 'COMPLETED',
-                ...reportData
+                startDate: reportData.startDate,
+                endDate: reportData.endDate,
+                comments: reportData.comments,
+                harvestedYieldKg: reportData.harvestedYieldKg ? parseFloat(reportData.harvestedYieldKg) : null,
+                actualConsumptions
             });
             setReportingTaskId(null);
             fetchTasks();
@@ -192,6 +219,32 @@ const WorkerDashboard = () => {
                                             <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-muted)' }}>COMENTARII (OPȚIONAL):</label>
                                             <textarea rows="3" value={reportData.comments} onChange={(e) => setReportData({...reportData, comments: e.target.value})} placeholder="Ex: Probleme tehnice la tractor..." style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '14px', resize: 'vertical' }} />
                                         </div>
+
+                                        {reportData.actualConsumptions.length > 0 && (
+                                            <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+                                                <h5 style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#166534', textTransform: 'uppercase' }}>Consum real</h5>
+                                                {reportData.actualConsumptions.map((consumption, index) => (
+                                                    <div key={consumption.inventoryItemId} style={{ marginBottom: '12px' }}>
+                                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: '#166534' }}>
+                                                            {consumption.itemName} ({consumption.unitOfMeasure}) - planificat: {consumption.plannedQuantity}
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0.01"
+                                                            step="0.01"
+                                                            value={consumption.quantityUsed}
+                                                            onChange={(e) => setReportData(prev => ({
+                                                                ...prev,
+                                                                actualConsumptions: prev.actualConsumptions.map((item, itemIndex) =>
+                                                                    itemIndex === index ? { ...item, quantityUsed: e.target.value } : item
+                                                                )
+                                                            }))}
+                                                            style={{ width: '100%', padding: '12px', border: '1px solid #86efac', borderRadius: '8px', fontSize: '14px' }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
 
                                         {tasks.find(t => t.id === reportingTaskId)?.type === 'RECOLTAT' && (
                                             <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#fff7ed', borderRadius: '8px', border: '1px solid #ffedd5' }}>
