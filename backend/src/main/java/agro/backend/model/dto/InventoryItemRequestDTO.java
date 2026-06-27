@@ -25,6 +25,9 @@ public class InventoryItemRequestDTO {
     @PositiveOrZero(message = "Cantitatea disponibila nu poate fi negativa.")
     private Double quantityAvailable;
 
+    @PositiveOrZero(message = "Pragul minim de stoc nu poate fi negativ.")
+    private Double minimumStockThreshold;
+
     @PositiveOrZero(message = "Pretul unitar nu poate fi negativ.")
     private Double unitPrice;
 }

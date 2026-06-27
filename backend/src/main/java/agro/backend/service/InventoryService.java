@@ -58,6 +58,7 @@ public class InventoryService {
         item.setCategory(request.getCategory());
         item.setUnitOfMeasure(request.getUnitOfMeasure().trim());
         item.setQuantityAvailable(request.getQuantityAvailable());
+        item.setMinimumStockThreshold(request.getMinimumStockThreshold() != null ? request.getMinimumStockThreshold() : 0.0);
         item.setUnitPrice(request.getUnitPrice());
     }
 }

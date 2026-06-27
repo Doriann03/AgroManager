@@ -60,6 +60,20 @@ class RequestDtoValidationTests {
     }
 
     @Test
+    void inventoryRequestRejectsNegativeMinimumStockThreshold() {
+        InventoryItemRequestDTO request = new InventoryItemRequestDTO();
+        request.setName("Fertilizant");
+        request.setCategory(ItemCategory.FERTILIZER);
+        request.setUnitOfMeasure("kg");
+        request.setQuantityAvailable(100.0);
+        request.setMinimumStockThreshold(-1.0);
+
+        Set<String> fields = invalidFields(request);
+
+        assertThat(fields).containsExactly("minimumStockThreshold");
+    }
+
+    @Test
     void machineryRequestRejectsNegativeHoursAndZeroMaintenanceInterval() {
         MachineryRequestDTO request = new MachineryRequestDTO();
         request.setName("Tractor");

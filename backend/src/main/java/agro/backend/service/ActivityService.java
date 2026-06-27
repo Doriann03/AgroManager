@@ -335,10 +335,40 @@ public class ActivityService {
                         + ". Disponibil: " + availableQuantity + item.getUnitOfMeasure());
             }
 
-            item.setQuantityAvailable(availableQuantity - quantityUsed);
+            double remainingQuantity = availableQuantity - quantityUsed;
+            item.setQuantityAvailable(remainingQuantity);
             inventoryItemRepository.save(item);
+            notifyManagersIfLowStockThresholdReached(item, availableQuantity, remainingQuantity);
         }
 
         activity.setInventoryDeducted(true);
+    }
+
+    private void notifyManagersIfLowStockThresholdReached(InventoryItem item, double previousQuantity, double currentQuantity) {
+        Double threshold = item.getMinimumStockThreshold();
+        if (threshold == null || previousQuantity <= threshold || currentQuantity > threshold) {
+            return;
+        }
+
+        if (item.getFarm() == null) {
+            return;
+        }
+
+        String unit = item.getUnitOfMeasure() != null ? item.getUnitOfMeasure() : "";
+        String message = String.format(
+                "Stoc redus pentru %s: %.2f %s ramase. Prag minim: %.2f %s.",
+                item.getName(),
+                currentQuantity,
+                unit,
+                threshold,
+                unit);
+
+        List<User> managers = userRepository.findByFarmIdAndRoleIn(
+                item.getFarm().getId(),
+                Arrays.asList(UserRole.FARM_MANAGER));
+
+        for (User manager : managers) {
+            notificationService.createNotification(manager, message, "LOW_STOCK");
+        }
     }
 }

@@ -28,6 +28,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -137,6 +139,31 @@ class ActivityServiceInventoryWorkflowTests {
         assertThat(item.getQuantityAvailable()).isEqualTo(450.0);
     }
 
+    @Test
+    void completingActivityNotifiesManagersWhenStockDropsBelowThreshold() {
+        Farm farm = farm();
+        Parcel parcel = parcel(farm);
+        User worker = worker(farm);
+        User manager = manager(farm);
+        InventoryItem item = inventoryItem(farm, 600.0);
+        item.setMinimumStockThreshold(500.0);
+        Activity activity = activityWithConsumption(parcel, worker, item, 150.0);
+
+        when(activityRepository.findById(activity.getId())).thenReturn(Optional.of(activity));
+        when(inventoryItemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+        when(parcelRepository.findById(parcel.getId())).thenReturn(Optional.of(parcel));
+        when(userRepository.findByFarmIdAndRoleIn(any(), any())).thenReturn(List.of(manager));
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        activityService.updateActivityStatus(activity.getId(), "COMPLETED", null, null, null, null, null, worker);
+
+        assertThat(item.getQuantityAvailable()).isEqualTo(450.0);
+        verify(notificationService).createNotification(
+                eq(manager),
+                argThat(message -> message.contains("Stoc redus pentru Seminte grau")),
+                eq("LOW_STOCK"));
+    }
+
     private ActivityRequestDTO activityRequest(Long itemId, Long workerId, Long parcelId, double quantityUsed) {
         ConsumptionRequestDTO consumption = new ConsumptionRequestDTO();
         consumption.setInventoryItemId(itemId);
@@ -201,6 +228,15 @@ class ActivityServiceInventoryWorkflowTests {
         return user;
     }
 
+    private User manager(Farm farm) {
+        User user = new User();
+        user.setId(4L);
+        user.setUsername("manager");
+        user.setRole(UserRole.FARM_MANAGER);
+        user.setFarm(farm);
+        return user;
+    }
+
     private InventoryItem inventoryItem(Farm farm, double quantityAvailable) {
         InventoryItem item = new InventoryItem();
         item.setId(5L);
@@ -208,6 +244,7 @@ class ActivityServiceInventoryWorkflowTests {
         item.setCategory(ItemCategory.SEED);
         item.setUnitOfMeasure("kg");
         item.setQuantityAvailable(quantityAvailable);
+        item.setMinimumStockThreshold(0.0);
         item.setFarm(farm);
         return item;
     }

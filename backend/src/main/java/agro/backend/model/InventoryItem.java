@@ -26,6 +26,9 @@ public class InventoryItem {
     @Column(nullable = false)
     private Double quantityAvailable;
 
+    @Column(name = "minimum_stock_threshold")
+    private Double minimumStockThreshold = 0.0;
+
     private Double unitPrice;
 
     // Un produs din magazie aparține unei ferme, nu unui utilizator individual
