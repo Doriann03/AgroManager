@@ -99,6 +99,7 @@ class ActivityServiceInventoryWorkflowTests {
         activityService.updateActivityStatus(activity.getId(), "COMPLETED", null, null, null, null, null, worker);
 
         assertThat(item.getQuantityAvailable()).isEqualTo(400.0);
+        assertThat(activity.getConsumptions().get(0).getUnitPriceAtConsumption()).isEqualTo(2.0);
         assertThat(activity.getInventoryDeducted()).isTrue();
         verify(inventoryItemRepository).save(item);
 
@@ -245,6 +246,7 @@ class ActivityServiceInventoryWorkflowTests {
         item.setUnitOfMeasure("kg");
         item.setQuantityAvailable(quantityAvailable);
         item.setMinimumStockThreshold(0.0);
+        item.setUnitPrice(2.0);
         item.setFarm(farm);
         return item;
     }

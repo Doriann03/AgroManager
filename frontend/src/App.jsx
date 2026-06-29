@@ -16,6 +16,7 @@ import AgronomistDashboard from './components/AgronomistDashboard';
 import AgronomistHistoryPage from './components/AgronomistHistoryPage';
 import WorkerDashboard from './components/WorkerDashboard';
 import WorkerHistoryPage from './components/WorkerHistoryPage';
+import WorkerPayrollPage from './components/WorkerPayrollPage';
 import FarmProfilePage from './components/FarmProfilePage';
 import YieldReportPage from './components/YieldReportPage';
 import WeatherStrategyPage from './components/WeatherStrategyPage';
@@ -23,7 +24,7 @@ import WeatherStrategyPage from './components/WeatherStrategyPage';
 import './App.css'; 
 
 // Layout general pentru utilizatori autentificati
-const AppLayout = ({ children }) => {
+const AppLayout = ({ children, maxWidth = '1200px' }) => {
   const navigate = useNavigate();
   const userStr = localStorage.getItem('user');
   const user = React.useMemo(() => userStr ? JSON.parse(userStr) : null, [userStr]);
@@ -191,7 +192,7 @@ const AppLayout = ({ children }) => {
       </header>
       
       <main style={{ flex: 1, padding: '40px 20px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ maxWidth, margin: '0 auto' }}>
           {children}
         </div>
       </main>
@@ -271,6 +272,12 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/worker/payroll" element={
+          <ProtectedRoute allowedRoles={['WORKER']}>
+            <AppLayout><WorkerPayrollPage /></AppLayout>
+          </ProtectedRoute>
+        } />
+
         {/* Rute specifice managerului */}
         <Route path="/manager/employees" element={
           <ProtectedRoute allowedRoles={['FARM_MANAGER']}>
@@ -286,7 +293,7 @@ function App() {
 
         <Route path="/manager/yield-report" element={
           <ProtectedRoute allowedRoles={['FARM_MANAGER', 'SUPER_ADMIN']}>
-            <AppLayout><YieldReportPage /></AppLayout>
+            <AppLayout maxWidth="1600px"><YieldReportPage /></AppLayout>
           </ProtectedRoute>
         } />
 

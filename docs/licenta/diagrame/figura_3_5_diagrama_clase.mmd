@@ -1,0 +1,113 @@
+classDiagram
+    class Farm {
+        Long id
+        String name
+        String address
+        String contactEmail
+        String visionAndGoals
+    }
+    class User {
+        Long id
+        String username
+        String password
+        String email
+        UserRole role
+    }
+    class Parcel {
+        Long id
+        String name
+        String cropType
+        double areaHectares
+        String coordinatesJson
+    }
+    class Activity {
+        Long id
+        String title
+        ActivityType type
+        ActivityStatus status
+        LocalDateTime startDate
+        LocalDateTime endDate
+        Double harvestedYieldKg
+        String comments
+        Boolean inventoryDeducted
+    }
+    class ActivityConsumption {
+        Long id
+        Double quantityUsed
+        Double unitPriceAtConsumption
+    }
+    class InventoryItem {
+        Long id
+        String name
+        ItemCategory category
+        String unitOfMeasure
+        Double quantityAvailable
+        Double minimumStockThreshold
+        Double unitPrice
+    }
+    class InventoryRequest {
+        Long id
+        String itemName
+        ItemCategory itemCategory
+        Double quantityRequested
+        String unitOfMeasure
+        RequestStatus status
+        RequestPriority priority
+        LocalDateTime dateCreated
+    }
+    class Machinery {
+        Long id
+        String name
+        String model
+        String licensePlate
+        MachineryType type
+        MachineryStatus status
+        Integer totalHours
+        Integer maintenanceIntervalHours
+        Integer nextMaintenanceHours
+    }
+    class MaintenanceLog {
+        Long id
+        LocalDate date
+        String description
+        Double cost
+        Integer hoursAtMaintenance
+    }
+    class CropSeason {
+        Long id
+        Integer harvestYear
+        String cropType
+        Double totalYieldKg
+        Double salePricePerKg
+        Double revenueOverride
+    }
+    class Notification {
+        Long id
+        String message
+        String type
+        boolean isRead
+        LocalDateTime dateCreated
+    }
+    class ParcelNdviHistory {
+        Long id
+        Long parcelId
+        String periodKey
+        Double ndviValue
+        Boolean isMockData
+    }
+
+    Farm "1" --> "0..*" User
+    Farm "1" --> "0..*" Parcel
+    Farm "1" --> "0..*" InventoryItem
+    Farm "1" --> "0..*" InventoryRequest
+    Farm "1" --> "0..*" Machinery
+    Parcel "1" --> "0..*" Activity
+    Parcel "1" --> "0..*" CropSeason
+    Parcel "1" --> "0..*" ParcelNdviHistory
+    Activity "1" --> "0..*" ActivityConsumption
+    Activity "0..*" --> "0..*" User : assignedWorkers
+    Activity "0..*" --> "0..*" Machinery
+    ActivityConsumption "0..*" --> "1" InventoryItem
+    Machinery "1" --> "0..*" MaintenanceLog
+    User "1" --> "0..*" Notification
+    User "1" --> "0..*" InventoryRequest : requester

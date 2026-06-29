@@ -1,0 +1,17 @@
+stateDiagram-v2
+    [*] --> ActivitatePlanificata
+    ActivitatePlanificata: Activity PENDING
+    ActivitateInLucru: Activity IN_PROGRESS
+    ActivitateFinalizata: Activity COMPLETED
+    ActivitatePlanificata --> ActivitateInLucru: muncitor începe lucrarea
+    ActivitateInLucru --> ActivitateFinalizata: muncitor finalizează și raportează
+    ActivitateFinalizata --> [*]
+
+    [*] --> CerereInAsteptare
+    CerereInAsteptare: InventoryRequest PENDING
+    CerereAprobata: InventoryRequest APPROVED
+    CerereRespinsa: InventoryRequest REJECTED
+    CerereInAsteptare --> CerereAprobata: manager aprobă
+    CerereInAsteptare --> CerereRespinsa: manager respinge
+    CerereAprobata --> [*]
+    CerereRespinsa --> [*]

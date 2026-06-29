@@ -2,7 +2,9 @@ package agro.backend.controller;
 
 import agro.backend.model.dto.CropSeasonRequestDTO;
 import agro.backend.model.dto.CropSeasonResponseDTO;
+import agro.backend.model.dto.CropSeasonFinancialRequestDTO;
 import agro.backend.service.CropSeasonService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -51,6 +53,21 @@ public class CropSeasonController {
         if (principal == null) return ResponseEntity.status(401).build();
         try {
             CropSeasonResponseDTO updatedSeason = cropSeasonService.updateSeason(seasonId, requestDTO, principal.getName());
+            return ResponseEntity.ok(updatedSeason);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{seasonId}/financials")
+    @PreAuthorize("hasRole('FARM_MANAGER')")
+    public ResponseEntity<CropSeasonResponseDTO> updateSeasonFinancials(
+            @PathVariable Long seasonId,
+            @Valid @RequestBody CropSeasonFinancialRequestDTO requestDTO,
+            Principal principal) {
+        if (principal == null) return ResponseEntity.status(401).build();
+        try {
+            CropSeasonResponseDTO updatedSeason = cropSeasonService.updateSeasonFinancials(seasonId, requestDTO, principal.getName());
             return ResponseEntity.ok(updatedSeason);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();

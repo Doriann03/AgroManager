@@ -8,4 +8,6 @@ public class CropSeasonRequestDTO {
     private String cropType;
     private Long parcelId;
     private Double totalYieldKg;
+    private Double salePricePerKg;
+    private Double revenueOverride;
 }

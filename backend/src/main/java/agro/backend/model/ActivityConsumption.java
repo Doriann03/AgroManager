@@ -24,4 +24,6 @@ public class ActivityConsumption {
 
     @Column(nullable = false)
     private Double quantityUsed;
+
+    private Double unitPriceAtConsumption;
 }

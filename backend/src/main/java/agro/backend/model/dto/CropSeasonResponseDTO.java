@@ -9,4 +9,6 @@ public class CropSeasonResponseDTO {
     private String cropType;
     private Long parcelId;
     private Double totalYieldKg;
+    private Double salePricePerKg;
+    private Double revenueOverride;
 }

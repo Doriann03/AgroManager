@@ -3,6 +3,7 @@ package agro.backend.service;
 import agro.backend.model.CropSeason;
 import agro.backend.model.Parcel;
 import agro.backend.model.User;
+import agro.backend.model.dto.CropSeasonFinancialRequestDTO;
 import agro.backend.model.dto.CropSeasonRequestDTO;
 import agro.backend.model.dto.CropSeasonResponseDTO;
 import agro.backend.repository.CropSeasonRepository;
@@ -71,6 +72,8 @@ public class CropSeasonService {
         season.setCropType(dto.getCropType());
         season.setParcel(parcel);
         season.setTotalYieldKg(dto.getTotalYieldKg());
+        season.setSalePricePerKg(dto.getSalePricePerKg());
+        season.setRevenueOverride(dto.getRevenueOverride());
 
         CropSeason savedSeason = cropSeasonRepository.save(season);
 
@@ -98,6 +101,30 @@ public class CropSeasonService {
         if (dto.getCropType() != null) {
             season.setCropType(dto.getCropType());
         }
+        if (dto.getSalePricePerKg() != null) {
+            season.setSalePricePerKg(dto.getSalePricePerKg());
+        }
+        if (dto.getRevenueOverride() != null) {
+            season.setRevenueOverride(dto.getRevenueOverride());
+        }
+
+        CropSeason updated = cropSeasonRepository.save(season);
+        return mapToDTO(updated);
+    }
+
+    public CropSeasonResponseDTO updateSeasonFinancials(Long seasonId, CropSeasonFinancialRequestDTO dto, String username) {
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Utilizatorul nu a fost gasit."));
+
+        CropSeason season = cropSeasonRepository.findById(seasonId)
+                .orElseThrow(() -> new RuntimeException("Sezonul nu a fost gasit."));
+
+        if (currentUser.getFarm() == null || !season.getParcel().getFarm().getId().equals(currentUser.getFarm().getId())) {
+            throw new RuntimeException("Nu aveti permisiunea de a modifica acest sezon.");
+        }
+
+        season.setSalePricePerKg(dto.getSalePricePerKg());
+        season.setRevenueOverride(dto.getRevenueOverride());
 
         CropSeason updated = cropSeasonRepository.save(season);
         return mapToDTO(updated);
@@ -110,6 +137,8 @@ public class CropSeasonService {
         dto.setCropType(season.getCropType());
         dto.setParcelId(season.getParcel().getId());
         dto.setTotalYieldKg(season.getTotalYieldKg());
+        dto.setSalePricePerKg(season.getSalePricePerKg());
+        dto.setRevenueOverride(season.getRevenueOverride());
         return dto;
     }
 }

@@ -42,8 +42,8 @@ const ManagerDashboard = () => {
             color: '#475569'
         },
         {
-            title: 'Producție și Recolte',
-            description: 'Analizați performanța fiecărei parcele pe ani.',
+            title: 'Productie si Profitabilitate',
+            description: 'Analizati recolta, costurile, veniturile si profitul pe hectar.',
             icon: '📈',
             path: '/manager/yield-report',
             color: '#10b981'

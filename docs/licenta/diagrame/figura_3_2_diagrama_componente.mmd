@@ -1,0 +1,35 @@
+flowchart TB
+    subgraph Frontend["Frontend React"]
+        Login["Autentificare / Înregistrare"]
+        Dash["Dashboard-uri pe roluri"]
+        Map["Hartă și parcele"]
+        InvUI["Magazie și cereri"]
+        MachUI["Utilaje și mentenanță"]
+        WorkerUI["Taskuri muncitor"]
+        ReportsUI["Rapoarte"]
+    end
+
+    subgraph Backend["Backend Spring Boot"]
+        Auth["AuthController / SecurityConfig"]
+        Farm["FarmController / FarmService"]
+        Parcel["ParcelController / ParcelService"]
+        Activity["ActivityController / ActivityService"]
+        Inventory["InventoryController / InventoryService"]
+        Requests["InventoryRequestController / InventoryRequestService"]
+        Machinery["MachineryController / MachineryService"]
+        Maintenance["MaintenanceController / MaintenanceService"]
+        Notification["NotificationController / NotificationService"]
+        NDVI["NdviController / NdviService"]
+        Weather["WeatherController"]
+        Repos["Repository-uri JPA"]
+    end
+
+    DB[("MySQL")]
+    Sentinel["Sentinel Hub"]
+    Meteo["Open-Meteo"]
+
+    Frontend --> Backend
+    Backend --> Repos
+    Repos --> DB
+    NDVI --> Sentinel
+    Weather --> Meteo

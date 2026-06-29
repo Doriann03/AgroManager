@@ -1,0 +1,10 @@
+flowchart TD
+    A["Agronomul identifică necesar de materiale"] --> B["Completează cererea de aprovizionare"]
+    B --> C["Sistemul salvează cererea cu status PENDING"]
+    C --> D["Managerul primește notificare"]
+    D --> E{"Managerul aprobă cererea?"}
+    E -->|Da| F["Status APPROVED"]
+    F --> G["Sistemul actualizează magazia"]
+    G --> H["Agronomul primește notificare de aprobare"]
+    E -->|Nu| I["Status REJECTED"]
+    I --> J["Agronomul primește notificare de respingere"]

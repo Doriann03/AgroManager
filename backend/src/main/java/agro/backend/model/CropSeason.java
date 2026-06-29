@@ -20,6 +20,10 @@ public class CropSeason {
 
     private Double totalYieldKg; // Cantitatea recoltata in kg (ex: 8500)
 
+    private Double salePricePerKg;
+
+    private Double revenueOverride;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parcel_id", nullable = false)
     private Parcel parcel;

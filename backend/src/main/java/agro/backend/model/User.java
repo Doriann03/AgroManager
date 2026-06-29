@@ -37,6 +37,10 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private UserRole role;
 
+    private Double hourlyRate;
+
+    private Double monthlySalary;
+
     // Legătura către entitatea Farm
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farm_id") // farm_id poate fi NULL pentru SUPER_ADMIN

@@ -2,11 +2,14 @@ package agro.backend.controller;
 
 import agro.backend.model.Farm;
 import agro.backend.model.User;
+import agro.backend.model.dto.EmployeeCompensationRequestDTO;
 import agro.backend.model.dto.EmployeeRequestDTO;
+import agro.backend.model.dto.EmployeeResponseDTO;
 import agro.backend.model.dto.FarmNoteRequestDTO;
 import agro.backend.model.dto.FarmNoteResponseDTO;
 import agro.backend.repository.UserRepository;
 import agro.backend.service.FarmService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -62,10 +65,10 @@ public class FarmController {
 
     @GetMapping("/employees")
     @PreAuthorize("hasAnyRole('FARM_MANAGER', 'AGRONOMIST')")
-    public ResponseEntity<List<User>> getEmployees(Principal principal) {
+    public ResponseEntity<List<EmployeeResponseDTO>> getEmployees(Principal principal) {
         User manager = getCurrentUser(principal);
         try {
-            List<User> employees = farmService.getEmployees(manager);
+            List<EmployeeResponseDTO> employees = farmService.getEmployees(manager);
             return ResponseEntity.ok(employees);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(null);
@@ -74,13 +77,27 @@ public class FarmController {
 
     @PostMapping("/employees")
     @PreAuthorize("hasRole('FARM_MANAGER')")
-    public ResponseEntity<?> addEmployee(@RequestBody EmployeeRequestDTO employeeRequest, Principal principal) {
+    public ResponseEntity<?> addEmployee(@Valid @RequestBody EmployeeRequestDTO employeeRequest, Principal principal) {
         User manager = getCurrentUser(principal);
         try {
-            User newEmployee = farmService.addEmployee(employeeRequest, manager);
+            EmployeeResponseDTO newEmployee = farmService.addEmployee(employeeRequest, manager);
             return ResponseEntity.ok(newEmployee);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/employees/{employeeId}/compensation")
+    @PreAuthorize("hasRole('FARM_MANAGER')")
+    public ResponseEntity<EmployeeResponseDTO> updateEmployeeCompensation(
+            @PathVariable Long employeeId,
+            @Valid @RequestBody EmployeeCompensationRequestDTO request,
+            Principal principal) {
+        User manager = getCurrentUser(principal);
+        try {
+            return ResponseEntity.ok(farmService.updateEmployeeCompensation(employeeId, request, manager));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

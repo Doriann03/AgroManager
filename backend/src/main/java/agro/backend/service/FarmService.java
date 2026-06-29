@@ -4,7 +4,9 @@ import agro.backend.model.Farm;
 import agro.backend.model.FarmNote;
 import agro.backend.model.User;
 import agro.backend.model.UserRole;
+import agro.backend.model.dto.EmployeeCompensationRequestDTO;
 import agro.backend.model.dto.EmployeeRequestDTO;
+import agro.backend.model.dto.EmployeeResponseDTO;
 import agro.backend.model.dto.FarmNoteRequestDTO;
 import agro.backend.model.dto.FarmNoteResponseDTO;
 import agro.backend.repository.FarmNoteRepository;
@@ -67,14 +69,17 @@ public class FarmService {
         return dto;
     }
 
-    public List<User> getEmployees(User manager) {
+    public List<EmployeeResponseDTO> getEmployees(User manager) {
         if (manager.getFarm() == null) {
             throw new RuntimeException("Managerul nu are o fermă asociată.");
         }
-        return userRepository.findAllByFarmId(manager.getFarm().getId());
+        return userRepository.findAllByFarmId(manager.getFarm().getId())
+                .stream()
+                .map(this::mapEmployeeToDTO)
+                .collect(Collectors.toList());
     }
 
-    public User addEmployee(EmployeeRequestDTO employeeRequest, User manager) {
+    public EmployeeResponseDTO addEmployee(EmployeeRequestDTO employeeRequest, User manager) {
         if (manager.getFarm() == null) {
             throw new RuntimeException("Managerul nu are o fermă asociată.");
         }
@@ -96,7 +101,42 @@ public class FarmService {
         employee.setEmail(email);
         employee.setRole(employeeRequest.getRole());
         employee.setFarm(manager.getFarm());
+        employee.setHourlyRate(employeeRequest.getHourlyRate());
+        employee.setMonthlySalary(employeeRequest.getMonthlySalary());
 
-        return userRepository.save(employee);
+        return mapEmployeeToDTO(userRepository.save(employee));
+    }
+
+    public EmployeeResponseDTO updateEmployeeCompensation(Long employeeId, EmployeeCompensationRequestDTO request, User manager) {
+        if (manager.getFarm() == null) {
+            throw new RuntimeException("Managerul nu are o ferma asociata.");
+        }
+
+        User employee = userRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Angajatul nu a fost gasit."));
+
+        if (employee.getFarm() == null || !employee.getFarm().getId().equals(manager.getFarm().getId())) {
+            throw new RuntimeException("Angajatul nu apartine fermei curente.");
+        }
+
+        if (employee.getRole() != UserRole.AGRONOMIST && employee.getRole() != UserRole.WORKER) {
+            throw new RuntimeException("Se pot actualiza doar angajatii operationali.");
+        }
+
+        employee.setHourlyRate(request.getHourlyRate());
+        employee.setMonthlySalary(request.getMonthlySalary());
+
+        return mapEmployeeToDTO(userRepository.save(employee));
+    }
+
+    private EmployeeResponseDTO mapEmployeeToDTO(User employee) {
+        EmployeeResponseDTO dto = new EmployeeResponseDTO();
+        dto.setId(employee.getId());
+        dto.setUsername(employee.getUsername());
+        dto.setEmail(employee.getEmail());
+        dto.setRole(employee.getRole());
+        dto.setHourlyRate(employee.getHourlyRate());
+        dto.setMonthlySalary(employee.getMonthlySalary());
+        return dto;
     }
 }

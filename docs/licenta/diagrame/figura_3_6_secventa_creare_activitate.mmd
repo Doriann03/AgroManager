@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor Agronom
+    participant UI as Frontend React
+    participant API as ActivityController
+    participant Service as ActivityService
+    participant ParcelRepo as ParcelRepository
+    participant UserRepo as UserRepository
+    participant MachineryRepo as MachineryRepository
+    participant InventoryRepo as InventoryItemRepository
+    participant ActivityRepo as ActivityRepository
+
+    Agronom->>UI: completează formular activitate
+    UI->>API: POST /api/activities
+    API->>Service: createActivity(dto, currentUser)
+    Service->>ParcelRepo: caută parcela
+    ParcelRepo-->>Service: parcela
+    Service->>Service: verifică ferma parcelei
+    Service->>UserRepo: caută muncitori selectați
+    UserRepo-->>Service: muncitori
+    Service->>MachineryRepo: caută utilaje selectate
+    MachineryRepo-->>Service: utilaje
+    Service->>InventoryRepo: verifică produse consumabile
+    InventoryRepo-->>Service: produse
+    Service->>ActivityRepo: salvează activitatea
+    ActivityRepo-->>Service: activitate salvată
+    Service-->>API: activitate
+    API-->>UI: răspuns OK
+    UI-->>Agronom: afișează activitatea creată

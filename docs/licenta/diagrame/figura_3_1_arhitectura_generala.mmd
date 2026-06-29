@@ -1,0 +1,8 @@
+flowchart LR
+    U["Utilizatori<br/>Manager, Agronom, Muncitor, Super Admin"] --> B["Browser web"]
+    B --> FE["Frontend React<br/>Rute protejate, pagini, formulare, hartă"]
+    FE --> API["Backend Spring Boot<br/>API REST, securitate, logică business"]
+    API --> DB[("MySQL<br/>Date aplicație")]
+    API --> OM["Open-Meteo<br/>date meteorologice"]
+    API --> SH["Sentinel Hub<br/>indicatori NDVI"]
+    FE --> MAP["Leaflet / OpenStreetMap<br/>hartă interactivă"]

@@ -142,6 +142,28 @@ class RequestDtoValidationTests {
         assertThat(fields).anyMatch(field -> field.endsWith("quantityUsed"));
     }
 
+    @Test
+    void cropSeasonFinancialRequestRejectsNegativeValues() {
+        CropSeasonFinancialRequestDTO request = new CropSeasonFinancialRequestDTO();
+        request.setSalePricePerKg(-1.0);
+        request.setRevenueOverride(-100.0);
+
+        Set<String> fields = invalidFields(request);
+
+        assertThat(fields).contains("salePricePerKg", "revenueOverride");
+    }
+
+    @Test
+    void employeeCompensationRequestRejectsNegativeValues() {
+        EmployeeCompensationRequestDTO request = new EmployeeCompensationRequestDTO();
+        request.setHourlyRate(-1.0);
+        request.setMonthlySalary(-100.0);
+
+        Set<String> fields = invalidFields(request);
+
+        assertThat(fields).contains("hourlyRate", "monthlySalary");
+    }
+
     private Set<String> invalidFields(Object request) {
         return validator.validate(request)
                 .stream()

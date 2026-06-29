@@ -1,0 +1,30 @@
+sequenceDiagram
+    actor Muncitor
+    participant UI as Frontend React
+    participant API as ActivityController
+    participant Service as ActivityService
+    participant ActivityRepo as ActivityRepository
+    participant InventoryRepo as InventoryItemRepository
+    participant MachineryRepo as MachineryRepository
+    participant CropRepo as CropSeasonRepository
+    participant Notif as NotificationService
+
+    Muncitor->>UI: finalizează lucrarea și raportează date
+    UI->>API: PUT /api/activities/{id}/status
+    API->>Service: updateActivityStatus(...)
+    Service->>ActivityRepo: caută activitatea
+    ActivityRepo-->>Service: activitate
+    Service->>Service: verifică muncitor atribuit
+    Service->>Service: setează status COMPLETED
+    Service->>InventoryRepo: scade consumurile reale
+    InventoryRepo-->>Service: stoc actualizat
+    Service->>MachineryRepo: actualizează status și ore utilaje
+    MachineryRepo-->>Service: utilaje actualizate
+    Service->>CropRepo: actualizează producția pentru recoltare
+    CropRepo-->>Service: sezon cultură actualizat
+    Service->>Notif: notifică managerul și agronomul
+    Service->>ActivityRepo: salvează activitatea
+    ActivityRepo-->>Service: activitate finalizată
+    Service-->>API: rezultat
+    API-->>UI: răspuns OK
+    UI-->>Muncitor: confirmare finalizare

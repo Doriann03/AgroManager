@@ -336,6 +336,7 @@ public class ActivityService {
             }
 
             double remainingQuantity = availableQuantity - quantityUsed;
+            consumption.setUnitPriceAtConsumption(item.getUnitPrice() != null ? item.getUnitPrice() : 0.0);
             item.setQuantityAvailable(remainingQuantity);
             inventoryItemRepository.save(item);
             notifyManagersIfLowStockThresholdReached(item, availableQuantity, remainingQuantity);

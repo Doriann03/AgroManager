@@ -1,0 +1,52 @@
+flowchart LR
+    Manager["FARM_MANAGER"]
+    Agronom["AGRONOMIST"]
+    Worker["WORKER"]
+    Admin["SUPER_ADMIN"]
+
+    subgraph System["AgroManager"]
+        UCAuth["Autentificare"]
+        UCFarm["Gestionare profil fermă"]
+        UCEmployees["Gestionare angajați"]
+        UCParcels["Gestionare parcele"]
+        UCMap["Consultare hartă"]
+        UCActivities["Planificare activități"]
+        UCWorkerTasks["Executare și raportare taskuri"]
+        UCInventory["Gestionare magazie"]
+        UCRequests["Cereri de aprovizionare"]
+        UCMachinery["Gestionare utilaje"]
+        UCMaint["Gestionare mentenanță"]
+        UCWeather["Consultare vreme"]
+        UCNDVI["Consultare NDVI"]
+        UCReports["Consultare rapoarte"]
+        UCPlatform["Administrare platformă"]
+    end
+
+    Manager --> UCAuth
+    Manager --> UCFarm
+    Manager --> UCEmployees
+    Manager --> UCParcels
+    Manager --> UCMap
+    Manager --> UCInventory
+    Manager --> UCRequests
+    Manager --> UCMachinery
+    Manager --> UCMaint
+    Manager --> UCWeather
+    Manager --> UCNDVI
+    Manager --> UCReports
+
+    Agronom --> UCAuth
+    Agronom --> UCParcels
+    Agronom --> UCMap
+    Agronom --> UCActivities
+    Agronom --> UCRequests
+    Agronom --> UCWeather
+    Agronom --> UCNDVI
+    Agronom --> UCReports
+
+    Worker --> UCAuth
+    Worker --> UCWorkerTasks
+
+    Admin --> UCAuth
+    Admin --> UCPlatform
+    Admin --> UCReports

@@ -71,6 +71,7 @@ public class DataInitializer {
                     agronomist.setPassword(passwordEncoder.encode("password"));
                     agronomist.setEmail("agronom@agromanager.com");
                     agronomist.setRole(UserRole.AGRONOMIST);
+                    agronomist.setMonthlySalary(10000.0);
                     agronomist.setFarm(testFarm);
                     userRepository.save(agronomist);
                     System.out.println(">>> Utilizator AGRONOMIST creat: user=agronom, pass=password");
@@ -83,6 +84,7 @@ public class DataInitializer {
                     worker.setPassword(passwordEncoder.encode("password"));
                     worker.setEmail("muncitor@agromanager.com");
                     worker.setRole(UserRole.WORKER);
+                    worker.setHourlyRate(30.0);
                     worker.setFarm(testFarm);
                     userRepository.save(worker);
                     System.out.println(">>> Utilizator WORKER creat: user=muncitor, pass=password");

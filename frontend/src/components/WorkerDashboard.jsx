@@ -148,6 +148,14 @@ const WorkerDashboard = () => {
                     >
                         📋 Vezi Istoric Lucrări
                     </button>
+
+                    <button
+                        onClick={() => navigate('/worker/payroll')}
+                        className="btn-secondary"
+                        style={{ marginTop: '10px', width: '100%', gap: '10px', padding: '12px' }}
+                    >
+                        Vezi fluturaș salariu
+                    </button>
                 </header>
 
                 <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '15px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
