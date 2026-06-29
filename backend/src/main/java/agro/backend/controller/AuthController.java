@@ -51,7 +51,7 @@ public class AuthController {
         );
 
         User user = (User) authentication.getPrincipal();
-        
+
         Long farmId = user.getFarm() != null ? user.getFarm().getId() : null;
         String farmName = user.getFarm() != null ? user.getFarm().getName() : null;
 

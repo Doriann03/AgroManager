@@ -114,5 +114,6 @@ public class DataInitializer {
             userRepository.save(user);
             System.out.println(">>> Username normalizat: '" + username + "' -> '" + normalizedUsername + "'");
         });
+
     }
 }

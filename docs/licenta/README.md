@@ -26,6 +26,11 @@ Acest folder conține textele de lucru pentru partea scrisă a lucrării de lice
 - `07_capitolul_6_testarea.md` - draft pentru Capitolul 6.
 - `09_capitolul_7_descrierea_aplicatiei_si_comparatii.md` - draft pentru Capitolul 7.
 - `10_rezumat_si_concluzii.md` - draft pentru rezumatul lucrării și concluziile finale.
+- `11_audit_reducere_lucrare.md` - analiză pentru reducerea lucrării și eliminarea redundanțelor din `Dorian.docx`.
+- `12_capitolul_7_varianta_scurtata.md` - variantă compactă pentru Capitolul 7, cu mai puține repetiții și capturi selectate.
+- `13_capitolul_4_varianta_scurtata.md` - variantă compactă pentru Capitolul 4, cu mai puține fragmente de cod.
+- `14_capitolul_2_varianta_scurtata.md` - variantă compactă pentru Capitolul 2, fără tabele și cu cerințe grupate.
+- `15_capturi_ecran_varianta_compacta.md` - lista compactă de capturi recomandate pentru Capitolul 7.
 - `diagrame/` - surse Mermaid pentru diagramele care se exportă ca imagini și se inserează în Word.
 - `08_bibliografie.md` - bibliografia de lucru, completată pe măsură ce apar surse noi.
 - `Dorian.docx` - documentul Word final de lucru, completat manual pe baza drafturilor Markdown.

@@ -29,7 +29,7 @@ public class Farm {
 
     // Cine a creat/este proprietarul principal al fermei (de obicei FARM_MANAGER)
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id", unique = true, nullable = false)
+    @JoinColumn(name = "created_by_user_id", unique = true)
     @JsonIgnore // Evităm bucle infinite în JSON
     private User createdBy;
 }
