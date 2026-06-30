@@ -32,6 +32,7 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
   const [notifications, setNotifications] = React.useState([]);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [showNotifications, setShowNotifications] = React.useState(false);
+  const notificationsRef = React.useRef(null);
 
   const fetchNotifications = React.useCallback(async () => {
     try {
@@ -53,6 +54,19 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
       return () => clearInterval(interval);
     }
   }, [user?.id, user?.role, fetchNotifications]);
+
+  React.useEffect(() => {
+    if (!showNotifications) return;
+
+    const handleOutsideClick = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showNotifications]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -105,7 +119,7 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
               {user?.role === 'FARM_MANAGER' && <Link to="/manager/employees" className="nav-link">Angajați</Link>}
               
               {/* Sectiune Notificari */}
-              <div style={{ position: 'relative', marginLeft: '10px' }}>
+              <div ref={notificationsRef} style={{ position: 'relative', marginLeft: '10px' }}>
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
                   style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', position: 'relative' }}

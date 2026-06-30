@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Polygon, Tooltip, LayersControl } from 'react-leaflet';
 import BackButton from './BackButton';
 import apiClient from '../api/axiosConfig';
@@ -96,6 +96,52 @@ const GeomanController = ({ setDrawnLayer, setCalculatedArea, setShowSaveForm, m
     return null;
 };
 
+const ParcelLayers = React.memo(({
+    parcels,
+    selectedParcelId,
+    ndviData,
+    canEditParcels,
+    onParcelClick,
+    onParcelEdit
+}) => (
+    <>
+        {parcels.map(parcel => {
+            if (!parcel.coordinates || parcel.coordinates.length === 0) {
+                return null;
+            }
+
+            const isSelected = selectedParcelId === parcel.id;
+            let parcelColor = getCropColor(parcel.cropType, isSelected);
+
+            if (isSelected && ndviData && ndviData.ndviValue !== undefined) {
+                parcelColor = getColorForNDVI(ndviData.ndviValue);
+            }
+
+            return (
+                <Polygon
+                    key={parcel.id}
+                    positions={parcel.coordinates}
+                    pathOptions={{
+                        color: parcelColor,
+                        weight: isSelected ? 4 : 2,
+                        fillOpacity: isSelected ? 0.6 : 0.4
+                    }}
+                    eventHandlers={{
+                        click: () => onParcelClick(parcel),
+                        'pm:edit': (e) => onParcelEdit(e, parcel)
+                    }}
+                >
+                    <Tooltip direction="center" permanent={false}>
+                        <strong>{parcel.name}</strong><br />
+                        {parcel.cropType}<br />
+                        {parcel.areaHectares.toFixed(2)} ha
+                    </Tooltip>
+                </Polygon>
+            );
+        })}
+    </>
+));
+
 const getCropColor = (cropType, isSelected) => {
     if (isSelected) return '#ffeb3b';
     
@@ -178,6 +224,7 @@ const MapPage = () => {
 
     const [selectedParcel, setSelectedParcel] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [showParcelList, setShowParcelList] = useState(false);
 
     const [activities, setActivities] = useState([]);
     const [showActivityForm, setShowActivityForm] = useState(false);
@@ -220,6 +267,23 @@ const MapPage = () => {
         selectedParcelIdRef.current = selectedParcel ? selectedParcel.id : null;
     }, [selectedParcel]);
 
+    const parsedParcels = useMemo(() => {
+        return parcels.map(parcel => {
+            try {
+                return {
+                    ...parcel,
+                    coordinates: JSON.parse(parcel.coordinatesJson)
+                };
+            } catch (err) {
+                console.warn("Nu s-au putut parsa coordonatele", err);
+                return {
+                    ...parcel,
+                    coordinates: []
+                };
+            }
+        });
+    }, [parcels]);
+
     const fetchParcels = useCallback(async () => {
         try {
             const response = await apiClient.get('/api/parcels');
@@ -257,7 +321,7 @@ const MapPage = () => {
         }
     }, []);
 
-    const fetchActivitiesForParcel = async (parcelId) => {
+    const fetchActivitiesForParcel = useCallback(async (parcelId) => {
         try {
             const response = await apiClient.get(`/api/activities/parcel/${parcelId}`);
             setActivities(response.data);
@@ -265,9 +329,9 @@ const MapPage = () => {
             console.error("Eroare la preluarea activităților:", err);
             setActivities([]);
         }
-    };
+    }, []);
 
-    const fetchCropSeasonsForParcel = async (parcelId) => {
+    const fetchCropSeasonsForParcel = useCallback(async (parcelId) => {
         try {
             const response = await apiClient.get(`/api/crop-seasons/parcel/${parcelId}`);
             setCropSeasons(response.data);
@@ -275,7 +339,7 @@ const MapPage = () => {
             console.error("Eroare la preluarea sezoanelor:", err);
             setCropSeasons([]);
         }
-    };
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -376,7 +440,7 @@ const MapPage = () => {
         setError('');
     };
 
-    const fetchNdvi = async (parcelId, period) => {
+    const fetchNdvi = useCallback(async (parcelId, period) => {
         setIsNdviLoading(true);
         try {
             const res = await apiClient.get(`/api/ndvi/parcel/${parcelId}?period=${period}`);
@@ -387,7 +451,7 @@ const MapPage = () => {
         } finally {
             setIsNdviLoading(false);
         }
-    };
+    }, []);
 
     const selectedNdviYear = selectedPeriod.split('-')[0];
     const selectedNdviMonth = selectedPeriod.split('-')[1];
@@ -404,9 +468,9 @@ const MapPage = () => {
         if (selectedParcel && isSidebarOpen) {
             fetchNdvi(selectedParcel.id, selectedPeriod);
         }
-    }, [selectedPeriod]);
+    }, [selectedPeriod, selectedParcel, isSidebarOpen, fetchNdvi]);
 
-    const handleParcelClick = (parcel) => {
+    const handleParcelClick = useCallback((parcel) => {
         setSelectedParcel(parcel);
         setIsSidebarOpen(true);
         setShowActivityForm(false);
@@ -418,7 +482,51 @@ const MapPage = () => {
             await fetchNdvi(parcel.id, selectedPeriod);
         };
         loadParcelData();
-    };
+    }, [fetchActivitiesForParcel, fetchCropSeasonsForParcel, fetchNdvi, selectedPeriod]);
+
+    const zoomToParcel = useCallback((parcel) => {
+        if (!mapRef.current || !parcel?.coordinatesJson) return;
+
+        try {
+            const coordinates = parcel.coordinates || JSON.parse(parcel.coordinatesJson);
+            if (Array.isArray(coordinates) && coordinates.length > 0) {
+                mapRef.current.fitBounds(coordinates, {
+                    padding: [35, 35],
+                    maxZoom: 14,
+                    animate: false
+                });
+            }
+        } catch (err) {
+            console.warn("Nu s-a putut face zoom pe parcela selectata", err);
+        }
+    }, []);
+
+    const handleParcelListSelect = useCallback((parcel) => {
+        handleParcelClick(parcel);
+        zoomToParcel(parcel);
+    }, [handleParcelClick, zoomToParcel]);
+
+    const toggleParcelList = useCallback(() => {
+        setShowParcelList(current => !current);
+    }, []);
+
+    const handleParcelEdit = useCallback((e, parcel) => {
+        if (!canEditParcels) return;
+
+        const editedLayer = e.layer;
+        const editedGeoJson = editedLayer.toGeoJSON();
+        const newAreaInHectares = turf.area(editedGeoJson) / 10000;
+        const newCoordinates = editedLayer.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
+
+        setSelectedParcel({
+            ...parcel,
+            areaHectares: newAreaInHectares,
+            coordinatesJson: JSON.stringify(newCoordinates),
+            coordinates: newCoordinates
+        });
+
+        setIsSidebarOpen(true);
+    }, [canEditParcels]);
 
 
     const closeSidebar = () => {
@@ -607,14 +715,48 @@ const MapPage = () => {
         flexDirection: 'column'
     };
 
+    const parcelListStyle = {
+        position: 'absolute',
+        top: '126px',
+        left: '60px',
+        width: '320px',
+        maxHeight: 'calc(100% - 110px)',
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.18)',
+        border: '1px solid var(--border-color)',
+        zIndex: 1001,
+        overflow: 'hidden'
+    };
+
     return (
-        <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 64px)', overflow: 'hidden', margin: 0, padding: 0, textAlign: 'left', display: 'flex', flexGrow: 1 }}>
+        <div style={{ position: 'relative', width: '100%', height: 'calc(100vh - 70px)', overflow: 'hidden', margin: 0, padding: 0, textAlign: 'left', display: 'flex', flexGrow: 1 }}>
             
             <BackButton style={{ position: 'absolute', top: '20px', left: '60px', zIndex: 1002 }} />
+            <button
+                type="button"
+                onClick={toggleParcelList}
+                style={{
+                    position: 'absolute',
+                    top: '70px',
+                    left: '60px',
+                    zIndex: 1002,
+                    backgroundColor: 'white',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 3px 10px rgba(0,0,0,0.14)',
+                    color: 'var(--text-main)',
+                    fontWeight: 700
+                }}
+            >
+                {showParcelList ? 'Ascunde parcele' : `Parcele (${parcels.length})`}
+            </button>
 
             <MapContainer 
                 center={[45.9432, 24.9668]} 
                 zoom={7} 
+                zoomAnimation={false}
+                fadeAnimation={false}
+                markerZoomAnimation={false}
                 style={{ height: '100%', width: '100%', zIndex: 1 }}
                 ref={mapRef}
             >
@@ -623,10 +765,21 @@ const MapPage = () => {
                         <TileLayer
                             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                             attribution='Tiles &copy; Esri &mdash; Source: Esri...'
+                            updateWhenIdle
+                            updateWhenZooming={false}
+                            keepBuffer={4}
+                            detectRetina={false}
                         />
                     </LayersControl.BaseLayer>
                     <LayersControl.BaseLayer name="Harta Rutieră (OSM)">
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; OpenStreetMap'
+                            updateWhenIdle
+                            updateWhenZooming={false}
+                            keepBuffer={4}
+                            detectRetina={false}
+                        />
                     </LayersControl.BaseLayer>
                 </LayersControl>
 
@@ -641,57 +794,66 @@ const MapPage = () => {
                     canEditParcels={canEditParcels}
                 />
 
-                {parcels.map(parcel => {
-                    try {
-                        const coordinates = JSON.parse(parcel.coordinatesJson);
-                        const isSelected = selectedParcel && selectedParcel.id === parcel.id;
-                        let parcelColor = getCropColor(parcel.cropType, isSelected);
-
-                        if (isSelected && ndviData && ndviData.ndviValue !== undefined) {
-                            parcelColor = getColorForNDVI(ndviData.ndviValue);
-                        }
-                        
-                        return (
-                            <Polygon 
-                                key={parcel.id} 
-                                positions={coordinates} 
-                                pathOptions={{ 
-                                    color: parcelColor,
-                                    weight: isSelected ? 4 : 2,
-                                    fillOpacity: isSelected ? 0.6 : 0.4
-                                }}
-                                eventHandlers={{
-                                    click: () => handleParcelClick(parcel),
-                                    'pm:edit': (e) => {
-                                        if (!canEditParcels) return;
-                                        const editedLayer = e.layer;
-                                        const editedGeoJson = editedLayer.toGeoJSON();
-                                        const newAreaInHectares = turf.area(editedGeoJson) / 10000;
-                                        const newCoordinates = editedLayer.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]);
-                                        
-                                        setSelectedParcel({
-                                            ...parcel, 
-                                            areaHectares: newAreaInHectares,
-                                            coordinatesJson: JSON.stringify(newCoordinates)
-                                        });
-                                        
-                                        setIsSidebarOpen(true);
-                                    }
-                                }}
-                            >
-                                <Tooltip direction="center" permanent={false}>
-                                    <strong>{parcel.name}</strong><br />
-                                    {parcel.cropType}<br />
-                                    {parcel.areaHectares.toFixed(2)} ha
-                                </Tooltip>
-                            </Polygon>
-                        );
-                    } catch (err) {
-                        console.warn("Nu s-au putut parsa coordonatele", err);
-                        return null;
-                    }
-                })}
+                <ParcelLayers
+                    parcels={parsedParcels}
+                    selectedParcelId={selectedParcel?.id}
+                    ndviData={ndviData}
+                    canEditParcels={canEditParcels}
+                    onParcelClick={handleParcelClick}
+                    onParcelEdit={handleParcelEdit}
+                />
             </MapContainer>
+
+            {showParcelList && (
+                <div style={parcelListStyle}>
+                    <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-color)', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ color: 'var(--text-main)' }}>Lista parcelelor</strong>
+                        <button
+                            type="button"
+                            onClick={() => setShowParcelList(false)}
+                            style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-muted)', fontSize: '18px' }}
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <div style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                        {parsedParcels.length === 0 ? (
+                            <div style={{ padding: '18px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                                Nu exista parcele inregistrate.
+                            </div>
+                        ) : parsedParcels.map(parcel => {
+                            const isSelected = selectedParcel?.id === parcel.id;
+                            return (
+                                <button
+                                    type="button"
+                                    key={parcel.id}
+                                    onClick={() => handleParcelListSelect(parcel)}
+                                    style={{
+                                        width: '100%',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        gap: '12px',
+                                        padding: '12px 16px',
+                                        border: 'none',
+                                        borderBottom: '1px solid #f1f5f9',
+                                        backgroundColor: isSelected ? '#ecfdf5' : 'white',
+                                        textAlign: 'left',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <span>
+                                        <strong style={{ display: 'block', color: 'var(--text-main)' }}>{parcel.name}</strong>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{parcel.cropType || 'Fara cultura'}</span>
+                                    </span>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                        {Number(parcel.areaHectares || 0).toFixed(2)} ha
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {(showSaveForm && canCreateParcels) && (
                 <div style={{ position: 'absolute', top: '70px', left: '60px', backgroundColor: 'white', padding: '15px', borderRadius: '8px', zIndex: 1001, boxShadow: '0 4px 15px rgba(0,0,0,0.2)', width: '280px' }}>

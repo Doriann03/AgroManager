@@ -106,6 +106,14 @@ const Login = () => {
                         >
                             Înregistrează-ți Ferma
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/')}
+                            className="btn-secondary"
+                            style={{ width: '100%', marginTop: '10px', backgroundColor: '#fff' }}
+                        >
+                            Inapoi la pagina principala
+                        </button>
                     </div>
                 </form>
             </div>
