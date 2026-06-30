@@ -46,7 +46,11 @@ public class FarmController {
     @PreAuthorize("hasRole('FARM_MANAGER')")
     public ResponseEntity<Farm> updateMyFarm(@RequestBody Farm farmData, Principal principal) {
         User manager = getCurrentUser(principal);
-        return ResponseEntity.ok(farmService.updateFarm(manager, farmData));
+        try {
+            return ResponseEntity.ok(farmService.updateFarm(manager, farmData));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @GetMapping("/notes")

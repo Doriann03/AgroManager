@@ -12,6 +12,8 @@ const getStatusBadge = (status) => {
 };
 
 const MachineryPage = () => {
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+    const isReadOnly = currentUser?.role === 'AGRONOMIST';
     const [machineryList, setMachineryList] = useState([]);
     const [showFormModal, setShowFormModal] = useState(false);
     const [selectedMachinery, setSelectedMachinery] = useState(null);
@@ -111,14 +113,23 @@ const MachineryPage = () => {
     return (
         <div style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>Gestiune Flotă Utilaje</h1>
+                <div>
+                    <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>
+                        {isReadOnly ? 'Vizualizare Flota Utilaje' : 'Gestiune Flota Utilaje'}
+                    </h1>
+                    {isReadOnly && (
+                        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)' }}>
+                            Modul consultare: stare, ore de functionare si jurnal de service.
+                        </p>
+                    )}
+                </div>
                 <BackButton />
             </div>
 
             <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
                  <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', backgroundColor: '#f8fafc' }}>
                     <h3 style={{ margin: 0 }}>Flota Mea ({machineryList.length})</h3>
-                    <button className="btn-primary" onClick={handleOpenAddForm}>+ Utilaj Nou</button>
+                    {!isReadOnly && <button className="btn-primary" onClick={handleOpenAddForm}>+ Utilaj Nou</button>}
                 </div>
                 
                 <div style={{ overflowX: 'auto' }}>
@@ -145,9 +156,15 @@ const MachineryPage = () => {
                                         <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Revizie la {m.nextMaintenanceHours || '?'} ore</div>
                                     </td>
                                     <td style={{ padding: '15px', textAlign: 'right' }}>
-                                        <button onClick={() => handleOpenEditForm(m)} style={{marginRight: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px'}} title="Editează">✏️</button>
-                                        <button className="btn-secondary" onClick={() => { setSelectedMachinery(m); setShowMaintenanceModal(true); }}>Detalii & Service</button>
-                                        <button onClick={() => handleDelete(m.id)} style={{marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px'}} title="Șterge">🗑️</button>
+                                        {!isReadOnly && (
+                                            <button onClick={() => handleOpenEditForm(m)} style={{marginRight: '10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px'}} title="Editeaza">Editeaza</button>
+                                        )}
+                                        <button className="btn-secondary" onClick={() => { setSelectedMachinery(m); setShowMaintenanceModal(true); }}>
+                                            {isReadOnly ? 'Jurnal service' : 'Detalii & Service'}
+                                        </button>
+                                        {!isReadOnly && (
+                                            <button onClick={() => handleDelete(m.id)} style={{marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '16px'}} title="Sterge">Sterge</button>
+                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -241,6 +258,7 @@ const MachineryPage = () => {
                             </table>
                         </div>
 
+                        {!isReadOnly && (
                         <form onSubmit={handleSaveMaintenance} style={{paddingTop: '20px', borderTop: '2px solid #e2e8f0'}}>
                             <h4 style={{marginTop: 0, color: '#0369a1'}}>+ Adaugă Intervenție Nouă</h4>
                             <div style={{display: 'flex', gap: '15px', alignItems: 'flex-end'}}>
@@ -263,6 +281,7 @@ const MachineryPage = () => {
                                 <button type="submit" className="btn-primary" style={{padding: '9px 15px', whiteSpace: 'nowrap'}}>Salvează</button>
                             </div>
                         </form>
+                        )}
                     </div>
                 </div>
             )}

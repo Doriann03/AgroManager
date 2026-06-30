@@ -6,6 +6,7 @@ const AgronomistHistoryPage = () => {
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedStatus, setSelectedStatus] = useState('ALL');
 
     const fetchActivities = useCallback(async () => {
         try {
@@ -51,13 +52,43 @@ const AgronomistHistoryPage = () => {
         }
     };
 
-    const filteredActivities = activities.filter(act => {
-        const date = act.startDate ? new Date(act.startDate) : null;
-        return date && date.getFullYear() === parseInt(selectedYear);
-    });
+    const statusLabels = {
+        ALL: 'Toate',
+        PENDING: 'Programate',
+        IN_PROGRESS: 'In lucru',
+        COMPLETED: 'Finalizate'
+    };
 
-    const years = Array.from(new Set(activities.map(act => 
-        act.startDate ? new Date(act.startDate).getFullYear() : null
+    const getActivityYear = (activity) => {
+        const dateValue = activity.startDate || activity.endDate;
+        if (dateValue) {
+            return new Date(dateValue).getFullYear();
+        }
+        return activity.status === 'PENDING' ? new Date().getFullYear() : null;
+    };
+
+    const filteredActivities = activities
+        .filter(act => {
+            const yearMatches = getActivityYear(act) === parseInt(selectedYear);
+            const statusMatches = selectedStatus === 'ALL' || act.status === selectedStatus;
+            return yearMatches && statusMatches;
+        })
+        .sort((a, b) => {
+            const aDate = new Date(a.startDate || a.endDate || 0).getTime();
+            const bDate = new Date(b.startDate || b.endDate || 0).getTime();
+            return bDate - aDate;
+        });
+
+    const statusCounts = activities
+        .filter(act => getActivityYear(act) === parseInt(selectedYear))
+        .reduce((counts, act) => {
+            counts.ALL += 1;
+            counts[act.status] = (counts[act.status] || 0) + 1;
+            return counts;
+        }, { ALL: 0, PENDING: 0, IN_PROGRESS: 0, COMPLETED: 0 });
+
+    const years = Array.from(new Set(activities.map(act =>
+        getActivityYear(act)
     ).filter(y => y))).sort((a, b) => b - a);
 
     if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Se încarcă istoricul...</div>;
@@ -82,9 +113,29 @@ const AgronomistHistoryPage = () => {
                 </div>
             </div>
 
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
+                {['ALL', 'PENDING', 'IN_PROGRESS', 'COMPLETED'].map(status => (
+                    <button
+                        key={status}
+                        onClick={() => setSelectedStatus(status)}
+                        style={{
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            border: selectedStatus === status ? '1px solid var(--primary-green)' : '1px solid var(--border-color)',
+                            backgroundColor: selectedStatus === status ? 'var(--primary-green)' : '#fff',
+                            color: selectedStatus === status ? '#fff' : 'var(--text-main)',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        {statusLabels[status]} ({statusCounts[status] || 0})
+                    </button>
+                ))}
+            </div>
+
             {filteredActivities.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
-                    <p style={{ color: 'var(--text-muted)' }}>Nu există activități înregistrate pentru anul {selectedYear}.</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Nu exista lucrari pentru anul {selectedYear} si filtrul selectat.</p>
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
@@ -98,7 +149,7 @@ const AgronomistHistoryPage = () => {
                                     {act.title && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{act.title}</div>}
                                 </div>
                                 <span style={{ ...getStatusStyle(act.status), padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
-                                    {act.status}
+                                    {statusLabels[act.status] || act.status}
                                 </span>
                             </div>
 

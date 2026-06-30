@@ -298,7 +298,7 @@ function App() {
         } />
 
         <Route path="/weather-strategy" element={
-          <ProtectedRoute allowedRoles={['FARM_MANAGER', 'AGRONOMIST', 'SUPER_ADMIN']}>
+          <ProtectedRoute allowedRoles={['AGRONOMIST', 'SUPER_ADMIN']}>
             <AppLayout><WeatherStrategyPage /></AppLayout>
           </ProtectedRoute>
         } />

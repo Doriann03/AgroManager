@@ -45,7 +45,12 @@ const FarmProfilePage = () => {
         e.preventDefault();
         setSaveArea(true);
         try {
-            await apiClient.put('/api/farms/my-farm', farm);
+            const response = await apiClient.put('/api/farms/my-farm', farm);
+            setFarm(response.data);
+            const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+            if (storedUser) {
+                localStorage.setItem('user', JSON.stringify({ ...storedUser, farmName: response.data.name }));
+            }
             alert("Profilul fermei a fost actualizat cu succes!");
         } catch (error) {
             console.error("Eroare la actualizarea profilului:", error);
@@ -98,8 +103,15 @@ const FarmProfilePage = () => {
 
                         <form onSubmit={handleUpdateProfile}>
                             <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-muted)' }}>NUME ENTITATE (READ-ONLY)</label>
-                                <input type="text" value={farm.name} disabled style={{ width: '100%', padding: '10px', backgroundColor: '#f1f5f9', border: '1px solid var(--border-color)', borderRadius: '8px', color: '#64748b' }} />
+                                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '5px', color: 'var(--text-muted)' }}>NUME FERMA</label>
+                                <input
+                                    type="text"
+                                    value={farm.name || ''}
+                                    onChange={e => setFarm({...farm, name: e.target.value})}
+                                    style={{ width: '100%', padding: '10px', border: '1px solid var(--border-color)', borderRadius: '8px' }}
+                                    placeholder="Numele fermei"
+                                    required
+                                />
                             </div>
 
                             <div style={{ marginBottom: '15px' }}>

@@ -66,7 +66,7 @@ const entityTableColumns = {
 
 const editableEntityTypes = ['parcels', 'inventory', 'machinery'];
 const roleOptions = ['SUPER_ADMIN', 'FARM_MANAGER', 'AGRONOMIST', 'WORKER'];
-const itemCategoryOptions = ['SEED', 'FERTILIZER', 'PESTICIDE', 'FUEL', 'OTHER'];
+const itemCategoryOptions = ['SEED', 'FERTILIZER', 'HERBICIDE', 'FUNGICIDE', 'INSECTICIDE', 'PESTICIDE', 'FUEL', 'SPARE_PARTS', 'OTHER'];
 const machineryTypeOptions = ['TRACTOR', 'COMBINA', 'SEMANATOARE', 'PLUG', 'DISC', 'PULVERIZATOR', 'ALTELE'];
 const machineryStatusOptions = ['DISPONIBIL', 'IN_CURSA', 'IN_SERVICE'];
 

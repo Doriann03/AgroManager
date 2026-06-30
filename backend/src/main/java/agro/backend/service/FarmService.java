@@ -37,6 +37,18 @@ public class FarmService {
 
     public Farm updateFarm(User manager, Farm updatedData) {
         Farm farm = getMyFarm(manager);
+        String farmName = updatedData.getName() != null ? updatedData.getName().trim() : "";
+        if (farmName.isBlank()) {
+            throw new RuntimeException("Numele fermei este obligatoriu.");
+        }
+
+        farmRepository.findByName(farmName)
+                .filter(existingFarm -> !existingFarm.getId().equals(farm.getId()))
+                .ifPresent(existingFarm -> {
+                    throw new RuntimeException("Exista deja o ferma cu acest nume.");
+                });
+
+        farm.setName(farmName);
         farm.setAddress(updatedData.getAddress());
         farm.setContactEmail(updatedData.getContactEmail());
         farm.setVisionAndGoals(updatedData.getVisionAndGoals());

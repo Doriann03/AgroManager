@@ -5,10 +5,31 @@ import BackButton from './BackButton';
 const categoryLabels = {
     SEED: 'Samanta',
     FERTILIZER: 'Ingrasamant',
+    HERBICIDE: 'Erbicid',
+    FUNGICIDE: 'Fungicid',
+    INSECTICIDE: 'Insecticid',
     PESTICIDE: 'Pesticid',
     FUEL: 'Combustibil',
+    SPARE_PARTS: 'Piese utilaje',
     OTHER: 'Altele'
 };
+
+const categoryOptions = [
+    'FERTILIZER',
+    'HERBICIDE',
+    'FUNGICIDE',
+    'INSECTICIDE',
+    'PESTICIDE',
+    'SEED',
+    'FUEL',
+    'SPARE_PARTS',
+    'OTHER'
+];
+
+const moneyFormatter = new Intl.NumberFormat('ro-RO', {
+    style: 'currency',
+    currency: 'RON'
+});
 
 const InventoryPage = () => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -164,6 +185,15 @@ const InventoryPage = () => {
         );
     };
 
+    const getUnitPrice = (item) => Number(item.unitPrice || 0);
+
+    const getStockValue = (item) => {
+        const quantity = Number(item.quantityAvailable || 0);
+        return quantity * getUnitPrice(item);
+    };
+
+    const totalStockValue = inventory.reduce((sum, item) => sum + getStockValue(item), 0);
+
     const getStatusStyle = (status) => {
         switch (status) {
             case 'APPROVED': return { color: '#16a34a', fontWeight: 'bold' };
@@ -224,7 +254,12 @@ const InventoryPage = () => {
             {activeTab === 'inventory' ? (
                 <div className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h3 style={{ margin: 0 }}>Stocuri Curente</h3>
+                        <div>
+                            <h3 style={{ margin: 0 }}>Stocuri Curente</h3>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
+                                Valoare totala stoc: <strong style={{ color: 'var(--text-main)' }}>{moneyFormatter.format(totalStockValue)}</strong>
+                            </div>
+                        </div>
                         {isManager && !showForm && (
                             <button className="btn-primary" onClick={() => setShowForm(true)}>+ Adauga Produs</button>
                         )}
@@ -240,11 +275,9 @@ const InventoryPage = () => {
                                 <div>
                                     <label style={{ fontSize: '12px', fontWeight: 'bold' }}>CATEGORIE</label>
                                     <select value={newItemCategory} onChange={e => setNewItemCategory(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                        <option value="FERTILIZER">Ingrasamant</option>
-                                        <option value="PESTICIDE">Pesticid</option>
-                                        <option value="SEED">Samanta</option>
-                                        <option value="FUEL">Combustibil</option>
-                                        <option value="OTHER">Altele</option>
+                                        {categoryOptions.map(category => (
+                                            <option key={category} value={category}>{categoryLabels[category]}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
@@ -283,6 +316,8 @@ const InventoryPage = () => {
                                 <th style={{ padding: '12px 10px' }}>Produs</th>
                                 <th style={{ padding: '12px 10px' }}>Categorie</th>
                                 <th style={{ padding: '12px 10px' }}>Stoc</th>
+                                <th style={{ padding: '12px 10px' }}>Pret/unitate</th>
+                                <th style={{ padding: '12px 10px' }}>Valoare stoc</th>
                                 <th style={{ padding: '12px 10px' }}>Prag minim</th>
                                 <th style={{ padding: '12px 10px' }}>Status</th>
                                 {isManager && <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actiuni</th>}
@@ -294,6 +329,8 @@ const InventoryPage = () => {
                                     <td style={{ padding: '15px 10px', fontWeight: '700' }}>{item.name}</td>
                                     <td style={{ padding: '15px 10px' }}>{categoryLabels[item.category] || item.category}</td>
                                     <td style={{ padding: '15px 10px' }}>{item.quantityAvailable} {item.unitOfMeasure}</td>
+                                    <td style={{ padding: '15px 10px', fontWeight: '600' }}>{moneyFormatter.format(getUnitPrice(item))}</td>
+                                    <td style={{ padding: '15px 10px', fontWeight: '700' }}>{moneyFormatter.format(getStockValue(item))}</td>
                                     <td style={{ padding: '15px 10px' }}>{item.minimumStockThreshold ?? 0} {item.unitOfMeasure}</td>
                                     <td style={{ padding: '15px 10px' }}>{statusBadge(item)}</td>
                                     {isManager && (
@@ -327,11 +364,9 @@ const InventoryPage = () => {
                                 <div>
                                     <label style={{ fontSize: '11px', fontWeight: 'bold' }}>CATEGORIE</label>
                                     <select value={newRequest.itemCategory} onChange={e => setNewRequest({...newRequest, itemCategory: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                        <option value="FERTILIZER">Ingrasamant</option>
-                                        <option value="PESTICIDE">Pesticid</option>
-                                        <option value="SEED">Samanta</option>
-                                        <option value="FUEL">Combustibil</option>
-                                        <option value="OTHER">Altele</option>
+                                        {categoryOptions.map(category => (
+                                            <option key={category} value={category}>{categoryLabels[category]}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div>
