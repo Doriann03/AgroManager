@@ -1,17 +1,23 @@
 stateDiagram-v2
-    [*] --> ActivitatePlanificata
-    ActivitatePlanificata: Activity PENDING
-    ActivitateInLucru: Activity IN_PROGRESS
-    ActivitateFinalizata: Activity COMPLETED
-    ActivitatePlanificata --> ActivitateInLucru: muncitor începe lucrarea
-    ActivitateInLucru --> ActivitateFinalizata: muncitor finalizează și raportează
-    ActivitateFinalizata --> [*]
+    state "Activitate agricola" as Activitate {
+        [*] --> PENDING
+        PENDING --> IN_PROGRESS: muncitorul incepe lucrarea
+        IN_PROGRESS --> COMPLETED: muncitorul finalizeaza lucrarea
+        COMPLETED --> [*]
+    }
 
-    [*] --> CerereInAsteptare
-    CerereInAsteptare: InventoryRequest PENDING
-    CerereAprobata: InventoryRequest APPROVED
-    CerereRespinsa: InventoryRequest REJECTED
-    CerereInAsteptare --> CerereAprobata: manager aprobă
-    CerereInAsteptare --> CerereRespinsa: manager respinge
-    CerereAprobata --> [*]
-    CerereRespinsa --> [*]
+    state "Cerere de aprovizionare" as Cerere {
+        [*] --> REQUEST_PENDING
+        REQUEST_PENDING --> APPROVED: managerul aproba
+        REQUEST_PENDING --> REJECTED: managerul respinge
+        APPROVED --> [*]
+        REJECTED --> [*]
+    }
+
+    state "Utilaj" as Utilaj {
+        [*] --> DISPONIBIL
+        DISPONIBIL --> IN_CURSA: lucrare inceputa
+        IN_CURSA --> DISPONIBIL: lucrare finalizata
+        DISPONIBIL --> IN_SERVICE: interventie service
+        IN_SERVICE --> DISPONIBIL: service finalizat
+    }

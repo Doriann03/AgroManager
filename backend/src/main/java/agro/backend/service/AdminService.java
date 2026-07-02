@@ -351,6 +351,7 @@ public class AdminService {
         delete("delete from activity_machinery where activity_id in (select id from activities where parcel_id in (select id from parcels where farm_id = :farmId))", farmId);
         delete("delete from activities where parcel_id in (select id from parcels where farm_id = :farmId)", farmId);
         delete("delete from crop_seasons where parcel_id in (select id from parcels where farm_id = :farmId)", farmId);
+        delete("delete from parcel_subsidies where parcel_id in (select id from parcels where farm_id = :farmId)", farmId);
         delete("delete from parcel_ndvi_history where parcel_id in (select id from parcels where farm_id = :farmId)", farmId);
         delete("delete from parcels where farm_id = :farmId", farmId);
         delete("delete from activity_machinery where machinery_id in (select id from machinery where farm_id = :farmId)", farmId);
@@ -406,6 +407,7 @@ public class AdminService {
         deleteForEntity("delete from activity_machinery where activity_id in (select id from activities where parcel_id = :id)", parcelId);
         deleteForEntity("delete from activities where parcel_id = :id", parcelId);
         deleteForEntity("delete from crop_seasons where parcel_id = :id", parcelId);
+        deleteForEntity("delete from parcel_subsidies where parcel_id = :id", parcelId);
         deleteForEntity("delete from parcel_ndvi_history where parcel_id = :id", parcelId);
         deleteForEntity("delete from parcels where id = :id", parcelId);
     }

@@ -17,14 +17,35 @@ const safeNumber = (value) => Number(value || 0);
 const formatNumber = (value) => numberFormatter.format(safeNumber(value));
 const formatCurrency = (value) => currencyFormatter.format(safeNumber(value));
 
+const defaultSubsidyForm = (year) => ({
+    parcelId: '',
+    year,
+    subsidyType: 'APIA - plata de baza',
+    amountPerHectare: '',
+    totalAmount: '',
+    status: 'ESTIMATED',
+    notes: ''
+});
+
+const subsidyStatusLabels = {
+    ESTIMATED: 'Estimata',
+    APPROVED: 'Aprobata',
+    PAID: 'Incasata'
+};
+
 const YieldReportPage = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [seasons, setSeasons] = useState([]);
+    const [parcels, setParcels] = useState([]);
+    const [subsidies, setSubsidies] = useState([]);
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [editingFinancials, setEditingFinancials] = useState({});
     const [savingSeasonId, setSavingSeasonId] = useState(null);
+    const [subsidyForm, setSubsidyForm] = useState(() => defaultSubsidyForm(new Date().getFullYear()));
+    const [editingSubsidyId, setEditingSubsidyId] = useState(null);
+    const [savingSubsidy, setSavingSubsidy] = useState(false);
 
     const availableYears = useMemo(() => {
         const years = Array.from(new Set(seasons.map((season) => season.harvestYear).filter(Boolean)));
@@ -36,6 +57,18 @@ const YieldReportPage = () => {
         const response = await apiClient.get('/api/crop-seasons');
         setSeasons(response.data);
     }, []);
+
+    const fetchParcels = useCallback(async () => {
+        const response = await apiClient.get('/api/parcels');
+        setParcels(response.data);
+    }, []);
+
+    const fetchSubsidies = useCallback(async () => {
+        const response = await apiClient.get('/api/subsidies', {
+            params: { year: selectedYear }
+        });
+        setSubsidies(response.data);
+    }, [selectedYear]);
 
     const fetchReport = useCallback(async () => {
         setLoading(true);
@@ -55,11 +88,11 @@ const YieldReportPage = () => {
     }, [selectedYear]);
 
     useEffect(() => {
-        fetchSeasons().catch((err) => {
-            console.error('Eroare la preluarea sezoanelor:', err);
-            setError('Nu s-au putut incarca anii disponibili.');
+        Promise.all([fetchSeasons(), fetchParcels()]).catch((err) => {
+            console.error('Eroare la preluarea datelor initiale:', err);
+            setError('Nu s-au putut incarca datele initiale pentru raport.');
         });
-    }, [fetchSeasons]);
+    }, [fetchParcels, fetchSeasons]);
 
     useEffect(() => {
         if (availableYears.length > 0 && !availableYears.includes(Number(selectedYear))) {
@@ -69,7 +102,13 @@ const YieldReportPage = () => {
 
     useEffect(() => {
         fetchReport();
-    }, [fetchReport]);
+        fetchSubsidies().catch((err) => {
+            console.error('Eroare la preluarea subventiilor:', err);
+            setError('Nu s-au putut incarca subventiile pentru anul selectat.');
+        });
+        setSubsidyForm((current) => ({ ...current, year: selectedYear }));
+        setEditingSubsidyId(null);
+    }, [fetchReport, fetchSubsidies, selectedYear]);
 
     const startEditingFinancials = (row) => {
         setEditingFinancials((current) => ({
@@ -127,9 +166,105 @@ const YieldReportPage = () => {
         }
     };
 
+    const updateSubsidyForm = (field, value) => {
+        setSubsidyForm((current) => ({
+            ...current,
+            [field]: value
+        }));
+    };
+
+    const resetSubsidyForm = () => {
+        setEditingSubsidyId(null);
+        setSubsidyForm(defaultSubsidyForm(selectedYear));
+    };
+
+    const startEditingSubsidy = (subsidy) => {
+        setEditingSubsidyId(subsidy.id);
+        setSubsidyForm({
+            parcelId: subsidy.parcelId || '',
+            year: subsidy.year || selectedYear,
+            subsidyType: subsidy.subsidyType || '',
+            amountPerHectare: subsidy.amountPerHectare ?? '',
+            totalAmount: subsidy.totalAmount ?? '',
+            status: subsidy.status || 'ESTIMATED',
+            notes: subsidy.notes || ''
+        });
+    };
+
+    const saveSubsidy = async (event) => {
+        event.preventDefault();
+
+        if (!subsidyForm.parcelId) {
+            alert('Selecteaza parcela pentru subventie.');
+            return;
+        }
+
+        const amountPerHectare = subsidyForm.amountPerHectare === '' ? 0 : Number(subsidyForm.amountPerHectare);
+        const totalAmount = subsidyForm.totalAmount === '' ? null : Number(subsidyForm.totalAmount);
+
+        if (amountPerHectare < 0 || (totalAmount !== null && totalAmount < 0)) {
+            alert('Valorile subventiei nu pot fi negative.');
+            return;
+        }
+
+        const payload = {
+            parcelId: Number(subsidyForm.parcelId),
+            year: Number(selectedYear),
+            subsidyType: subsidyForm.subsidyType.trim(),
+            amountPerHectare,
+            totalAmount,
+            status: subsidyForm.status,
+            notes: subsidyForm.notes.trim() || null
+        };
+
+        if (!payload.subsidyType) {
+            alert('Completeaza tipul subventiei.');
+            return;
+        }
+
+        setSavingSubsidy(true);
+        try {
+            if (editingSubsidyId) {
+                await apiClient.put(`/api/subsidies/${editingSubsidyId}`, payload);
+            } else {
+                await apiClient.post('/api/subsidies', payload);
+            }
+            resetSubsidyForm();
+            await Promise.all([fetchSubsidies(), fetchReport()]);
+        } catch (err) {
+            console.error('Eroare la salvarea subventiei:', err);
+            alert('Nu s-a putut salva subventia.');
+        } finally {
+            setSavingSubsidy(false);
+        }
+    };
+
+    const deleteSubsidy = async (subsidy) => {
+        const confirmed = window.confirm(`Stergi definitiv subventia "${subsidy.subsidyType}" pentru parcela ${subsidy.parcelName}?`);
+        if (!confirmed) return;
+
+        try {
+            await apiClient.delete(`/api/subsidies/${subsidy.id}`);
+            if (editingSubsidyId === subsidy.id) {
+                resetSubsidyForm();
+            }
+            await Promise.all([fetchSubsidies(), fetchReport()]);
+        } catch (err) {
+            console.error('Eroare la stergerea subventiei:', err);
+            alert('Nu s-a putut sterge subventia.');
+        }
+    };
+
     const rows = report?.rows || [];
     const currentYearOption = new Date().getFullYear();
-    const yearOptions = availableYears.length > 0 ? availableYears : [currentYearOption];
+    const yearOptions = Array.from(new Set([
+        ...availableYears,
+        currentYearOption,
+        currentYearOption - 1,
+        currentYearOption - 2,
+        currentYearOption - 3,
+        currentYearOption - 4
+    ])).sort((a, b) => b - a);
     const expenseBreakdown = [
         { label: 'Materiale', scope: 'Direct pe parcela', value: report?.totalInputCost, accent: '#f59e0b' },
         { label: 'Munca muncitori', scope: 'Direct pe parcela', value: report?.totalWorkerLaborCost, accent: '#8b5cf6' },
@@ -177,6 +312,8 @@ const YieldReportPage = () => {
                 <SummaryCard title="Salarii agronomi" value={formatCurrency(report?.administrativeSalaryCost)} accent="#64748b" />
                 <SummaryCard title="Mentenanta utilaje" value={formatCurrency(report?.maintenanceCost)} accent="#ef4444" />
                 <SummaryCard title="Cheltuieli ferma" value={formatCurrency(report?.totalExpenses)} accent="#0f172a" />
+                <SummaryCard title="Venit recolta" value={formatCurrency(report?.totalCropRevenue)} accent="#0ea5e9" />
+                <SummaryCard title="Subventii APIA" value={formatCurrency(report?.totalSubsidyRevenue)} accent="#22c55e" />
                 <SummaryCard title="Venit total" value={formatCurrency(report?.totalRevenue)} accent="#3b82f6" />
                 <SummaryCard title="Profit ferma" value={formatCurrency(report?.totalProfit)} accent={safeNumber(report?.totalProfit) >= 0 ? '#16a34a' : '#dc2626'} />
                 <SummaryCard title="Profit / ha" value={formatCurrency(report?.profitPerHectare)} accent={safeNumber(report?.profitPerHectare) >= 0 ? '#16a34a' : '#dc2626'} />
@@ -202,8 +339,106 @@ const YieldReportPage = () => {
                 </div>
             </div>
 
+            <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '18px' }}>Subventii APIA pe parcele</h3>
+                        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '13px' }}>
+                            Sumele introduse aici sunt adaugate automat la veniturile parcelei pentru anul {selectedYear}.
+                        </p>
+                    </div>
+                    <strong style={{ color: 'var(--primary-green)', fontSize: '18px' }}>{formatCurrency(report?.totalSubsidyRevenue)}</strong>
+                </div>
+
+                <form onSubmit={saveSubsidy} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1.2fr) minmax(170px, 1fr) repeat(3, minmax(130px, 0.8fr)) auto', gap: '10px', alignItems: 'end', marginBottom: '18px' }}>
+                    <Field label="Parcela">
+                        <select value={subsidyForm.parcelId} onChange={(e) => updateSubsidyForm('parcelId', e.target.value)} style={formControlStyle}>
+                            <option value="">Selecteaza parcela</option>
+                            {parcels.map((parcel) => (
+                                <option key={parcel.id} value={parcel.id}>
+                                    {parcel.name} ({formatNumber(parcel.areaHectares)} ha)
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Tip subventie">
+                        <input value={subsidyForm.subsidyType} onChange={(e) => updateSubsidyForm('subsidyType', e.target.value)} style={formControlStyle} />
+                    </Field>
+                    <Field label="RON / ha">
+                        <input type="number" min="0" step="0.01" value={subsidyForm.amountPerHectare} onChange={(e) => updateSubsidyForm('amountPerHectare', e.target.value)} placeholder="calcul automat" style={formControlStyle} />
+                    </Field>
+                    <Field label="Total RON">
+                        <input type="number" min="0" step="0.01" value={subsidyForm.totalAmount} onChange={(e) => updateSubsidyForm('totalAmount', e.target.value)} placeholder="auto din RON/ha" style={formControlStyle} />
+                    </Field>
+                    <Field label="Status">
+                        <select value={subsidyForm.status} onChange={(e) => updateSubsidyForm('status', e.target.value)} style={formControlStyle}>
+                            <option value="ESTIMATED">Estimata</option>
+                            <option value="APPROVED">Aprobata</option>
+                            <option value="PAID">Incasata</option>
+                        </select>
+                    </Field>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button type="submit" className="btn-primary" disabled={savingSubsidy} style={{ padding: '9px 12px', whiteSpace: 'nowrap' }}>
+                            {savingSubsidy ? 'Se salveaza...' : editingSubsidyId ? 'Actualizeaza' : 'Adauga'}
+                        </button>
+                        {editingSubsidyId && (
+                            <button type="button" className="btn-secondary" onClick={resetSubsidyForm} style={{ padding: '9px 12px' }}>
+                                Anuleaza
+                            </button>
+                        )}
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                        <input value={subsidyForm.notes} onChange={(e) => updateSubsidyForm('notes', e.target.value)} placeholder="Observatii optionale" style={{ ...formControlStyle, width: '100%' }} />
+                    </div>
+                </form>
+
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+                            <tr>
+                                <HeaderCell>Parcela</HeaderCell>
+                                <HeaderCell>Tip</HeaderCell>
+                                <HeaderCell>RON / ha</HeaderCell>
+                                <HeaderCell>Total</HeaderCell>
+                                <HeaderCell>Status</HeaderCell>
+                                <HeaderCell>Actiuni</HeaderCell>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {subsidies.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" style={{ padding: '18px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>
+                                        Nu exista subventii APIA inregistrate pentru anul {selectedYear}.
+                                    </td>
+                                </tr>
+                            ) : subsidies.map((subsidy) => (
+                                <tr key={subsidy.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                    <BodyCell>
+                                        <strong>{subsidy.parcelName}</strong>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>{formatNumber(subsidy.parcelAreaHectares)} ha</div>
+                                    </BodyCell>
+                                    <BodyCell>
+                                        {subsidy.subsidyType}
+                                        {subsidy.notes && <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>{subsidy.notes}</div>}
+                                    </BodyCell>
+                                    <BodyCell>{formatCurrency(subsidy.amountPerHectare)}</BodyCell>
+                                    <BodyCell><strong>{formatCurrency(subsidy.totalAmount)}</strong></BodyCell>
+                                    <BodyCell>{subsidyStatusLabels[subsidy.status] || subsidy.status}</BodyCell>
+                                    <BodyCell>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            <button className="btn-secondary" onClick={() => startEditingSubsidy(subsidy)} style={{ padding: '6px 10px', fontSize: '12px' }}>Editeaza</button>
+                                            <button onClick={() => deleteSubsidy(subsidy)} style={{ padding: '6px 10px', fontSize: '12px', border: '1px solid #fecaca', background: '#fee2e2', color: '#b91c1c', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Sterge</button>
+                                        </div>
+                                    </BodyCell>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
-                <table style={{ width: '100%', minWidth: '1320px', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <table style={{ width: '100%', minWidth: '1450px', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid var(--border-color)' }}>
                         <tr>
                             <HeaderCell>Parcela</HeaderCell>
@@ -215,6 +450,7 @@ const YieldReportPage = () => {
                             <HeaderCell>Materiale</HeaderCell>
                             <HeaderCell>Munca</HeaderCell>
                             <HeaderCell>Cost parcela</HeaderCell>
+                            <HeaderCell>Subventii</HeaderCell>
                             <HeaderCell>Venit</HeaderCell>
                             <HeaderCell>Profit</HeaderCell>
                             <HeaderCell>Actiuni</HeaderCell>
@@ -223,13 +459,13 @@ const YieldReportPage = () => {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan="12" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                <td colSpan="13" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                                     Se incarca raportul...
                                 </td>
                             </tr>
                         ) : rows.length === 0 ? (
                             <tr>
-                                <td colSpan="12" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                                <td colSpan="13" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                                     Nu exista sezoane, venituri sau costuri inregistrate pentru anul {selectedYear}.
                                 </td>
                             </tr>
@@ -289,10 +525,14 @@ const YieldReportPage = () => {
                                             <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>{formatCurrency(row.costPerHectare)} / ha</div>
                                         </BodyCell>
                                         <BodyCell>
+                                            <strong>{formatCurrency(row.subsidyRevenue)}</strong>
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>APIA / alte plati</div>
+                                        </BodyCell>
+                                        <BodyCell>
                                             {!row.seasonId ? (
                                                 <>
                                                     <strong>{formatCurrency(row.totalRevenue)}</strong>
-                                                    <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>venit neinregistrat</div>
+                                                    <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>doar subventii</div>
                                                 </>
                                             ) : editing ? (
                                                 <>
@@ -313,6 +553,11 @@ const YieldReportPage = () => {
                                                 <>
                                                     <strong>{formatCurrency(row.totalRevenue)}</strong>
                                                     <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '4px' }}>{formatCurrency(row.revenuePerHectare)} / ha</div>
+                                                    {safeNumber(row.subsidyRevenue) > 0 && (
+                                                        <div style={{ color: '#16a34a', fontSize: '11px', marginTop: '4px' }}>
+                                                            recolta {formatCurrency(row.cropRevenue)} + APIA {formatCurrency(row.subsidyRevenue)}
+                                                        </div>
+                                                    )}
                                                     {row.revenueOverride != null && (
                                                         <div style={{ color: '#2563eb', fontSize: '11px', marginTop: '4px' }}>venit introdus manual</div>
                                                     )}
@@ -386,12 +631,28 @@ const BodyCell = ({ children }) => (
     </td>
 );
 
+const Field = ({ label, children }) => (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>
+        {label}
+        {children}
+    </label>
+);
+
 const inputStyle = {
     width: '120px',
     padding: '7px 8px',
     borderRadius: '6px',
     border: '1px solid var(--border-color)',
     fontSize: '12px'
+};
+
+const formControlStyle = {
+    width: '100%',
+    padding: '9px 10px',
+    borderRadius: '7px',
+    border: '1px solid var(--border-color)',
+    fontSize: '13px',
+    boxSizing: 'border-box'
 };
 
 export default YieldReportPage;

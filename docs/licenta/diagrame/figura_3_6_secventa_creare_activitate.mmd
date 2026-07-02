@@ -1,28 +1,41 @@
 sequenceDiagram
-    actor Agronom
+    actor Agronom as Agronom
     participant UI as Frontend React
     participant API as ActivityController
     participant Service as ActivityService
     participant ParcelRepo as ParcelRepository
     participant UserRepo as UserRepository
-    participant MachineryRepo as MachineryRepository
-    participant InventoryRepo as InventoryItemRepository
-    participant ActivityRepo as ActivityRepository
+    participant MachRepo as MachineryRepository
+    participant InvRepo as InventoryItemRepository
+    participant DB as MySQL
 
-    Agronom->>UI: completează formular activitate
+    Agronom->>UI: Completeaza formularul lucrarii
     UI->>API: POST /api/activities
     API->>Service: createActivity(dto, currentUser)
-    Service->>ParcelRepo: caută parcela
+
+    Service->>ParcelRepo: cauta parcela selectata
+    ParcelRepo->>DB: SELECT parcel
+    DB-->>ParcelRepo: parcela
     ParcelRepo-->>Service: parcela
-    Service->>Service: verifică ferma parcelei
-    Service->>UserRepo: caută muncitori selectați
-    UserRepo-->>Service: muncitori
-    Service->>MachineryRepo: caută utilaje selectate
-    MachineryRepo-->>Service: utilaje
-    Service->>InventoryRepo: verifică produse consumabile
-    InventoryRepo-->>Service: produse
-    Service->>ActivityRepo: salvează activitatea
-    ActivityRepo-->>Service: activitate salvată
-    Service-->>API: activitate
-    API-->>UI: răspuns OK
-    UI-->>Agronom: afișează activitatea creată
+
+    Service->>UserRepo: cauta muncitorii selectati
+    UserRepo->>DB: SELECT users
+    DB-->>UserRepo: muncitori
+    UserRepo-->>Service: lista muncitori
+
+    Service->>MachRepo: cauta utilajele selectate
+    MachRepo->>DB: SELECT machinery
+    DB-->>MachRepo: utilaje
+    MachRepo-->>Service: lista utilaje
+
+    Service->>InvRepo: cauta materialele planificate
+    InvRepo->>DB: SELECT inventory_items
+    DB-->>InvRepo: produse
+    InvRepo-->>Service: lista produse
+
+    Service->>Service: valideaza ferma curenta si datele primite
+    Service->>DB: INSERT activity si relatii asociate
+    DB-->>Service: activitate salvata
+    Service-->>API: activitate creata
+    API-->>UI: raspuns succes
+    UI-->>Agronom: Lucrarea apare in lista activitatilor

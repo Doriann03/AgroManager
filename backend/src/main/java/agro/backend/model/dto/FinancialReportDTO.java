@@ -16,6 +16,8 @@ public class FinancialReportDTO {
     private Double administrativeSalaryCost = 0.0;
     private Double maintenanceCost = 0.0;
     private Double totalExpenses = 0.0;
+    private Double totalCropRevenue = 0.0;
+    private Double totalSubsidyRevenue = 0.0;
     private Double totalRevenue = 0.0;
     private Double totalProfit = 0.0;
     private Double costPerHectare = 0.0;

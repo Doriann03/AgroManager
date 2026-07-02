@@ -1,10 +1,19 @@
 flowchart TD
-    A["Agronomul identifică necesar de materiale"] --> B["Completează cererea de aprovizionare"]
-    B --> C["Sistemul salvează cererea cu status PENDING"]
-    C --> D["Managerul primește notificare"]
-    D --> E{"Managerul aprobă cererea?"}
-    E -->|Da| F["Status APPROVED"]
-    F --> G["Sistemul actualizează magazia"]
-    G --> H["Agronomul primește notificare de aprobare"]
-    E -->|Nu| I["Status REJECTED"]
-    I --> J["Agronomul primește notificare de respingere"]
+    Start([Start]) --> Check["Agronomul verifica stocurile"]
+    Check --> Need{"Material suficient?"}
+    Need -->|Da| Plan["Planifica lucrarea fara cerere"]
+    Plan --> End1([Final])
+
+    Need -->|Nu| Create["Creeaza cerere de aprovizionare"]
+    Create --> Pending["Cerere cu status PENDING"]
+    Pending --> Notify["Managerul primeste notificare"]
+    Notify --> Decision{"Managerul aproba?"}
+
+    Decision -->|Da| Approved["Status APPROVED"]
+    Approved --> Stock["Stocul este actualizat"]
+    Stock --> NotifyAgr["Agronomul este notificat"]
+    NotifyAgr --> End2([Final])
+
+    Decision -->|Nu| Rejected["Status REJECTED"]
+    Rejected --> Reason["Cererea ramane in istoric"]
+    Reason --> End3([Final])

@@ -6,6 +6,7 @@ import agro.backend.model.ActivityStatus;
 import agro.backend.model.CropSeason;
 import agro.backend.model.InventoryItem;
 import agro.backend.model.Parcel;
+import agro.backend.model.ParcelSubsidy;
 import agro.backend.model.User;
 import agro.backend.model.UserRole;
 import agro.backend.model.dto.FinancialReportDTO;
@@ -13,6 +14,7 @@ import agro.backend.model.dto.FinancialReportRowDTO;
 import agro.backend.repository.ActivityRepository;
 import agro.backend.repository.CropSeasonRepository;
 import agro.backend.repository.MaintenanceLogRepository;
+import agro.backend.repository.ParcelSubsidyRepository;
 import agro.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class FinancialReportService {
     private final CropSeasonRepository cropSeasonRepository;
     private final ActivityRepository activityRepository;
     private final MaintenanceLogRepository maintenanceLogRepository;
+    private final ParcelSubsidyRepository parcelSubsidyRepository;
 
     @Transactional(readOnly = true)
     public FinancialReportDTO getFinancialReport(String username, Integer requestedYear) {
@@ -53,9 +56,12 @@ public class FinancialReportService {
                 farmId,
                 ActivityStatus.COMPLETED,
                 year);
+        List<ParcelSubsidy> subsidies = parcelSubsidyRepository.findAllByFarmAndYear(farmId, year);
 
         Map<Long, Double> costByParcelId = calculateInputCostsByParcel(activities);
         Map<Long, Double> laborCostByParcelId = calculateWorkerLaborCostsByParcel(activities);
+        Map<Long, Double> subsidyByParcelId = calculateSubsidiesByParcel(subsidies);
+        Map<Long, Parcel> subsidyParcelsById = collectSubsidyParcelsById(subsidies);
         Map<Long, Parcel> activityParcelsById = collectActivityParcelsById(activities);
         Set<Long> rowParcelIds = new HashSet<>();
 
@@ -68,9 +74,14 @@ public class FinancialReportService {
             FinancialReportRowDTO row = buildRow(
                     season,
                     costByParcelId.getOrDefault(parcelId, 0.0),
-                    laborCostByParcelId.getOrDefault(parcelId, 0.0));
+                    laborCostByParcelId.getOrDefault(parcelId, 0.0),
+                    subsidyByParcelId.getOrDefault(parcelId, 0.0));
             report.getRows().add(row);
             addRowTotals(report, row);
+        }
+
+        for (Map.Entry<Long, Parcel> entry : subsidyParcelsById.entrySet()) {
+            activityParcelsById.putIfAbsent(entry.getKey(), entry.getValue());
         }
 
         for (Map.Entry<Long, Parcel> entry : activityParcelsById.entrySet()) {
@@ -81,11 +92,12 @@ public class FinancialReportService {
 
             double inputCost = costByParcelId.getOrDefault(parcelId, 0.0);
             double laborCost = laborCostByParcelId.getOrDefault(parcelId, 0.0);
-            if (inputCost <= 0 && laborCost <= 0) {
+            double subsidyRevenue = subsidyByParcelId.getOrDefault(parcelId, 0.0);
+            if (inputCost <= 0 && laborCost <= 0 && subsidyRevenue <= 0) {
                 continue;
             }
 
-            FinancialReportRowDTO row = buildCostOnlyRow(entry.getValue(), year, inputCost, laborCost);
+            FinancialReportRowDTO row = buildCostOnlyRow(entry.getValue(), year, inputCost, laborCost, subsidyRevenue);
             report.getRows().add(row);
             addRowTotals(report, row);
         }
@@ -114,6 +126,8 @@ public class FinancialReportService {
         report.setTotalWorkerLaborCost(report.getTotalWorkerLaborCost() + value(row.getWorkerLaborCost()));
         report.setTotalDirectCost(report.getTotalDirectCost() + value(row.getTotalDirectCost()));
         report.setTotalRevenue(report.getTotalRevenue() + value(row.getTotalRevenue()));
+        report.setTotalCropRevenue(report.getTotalCropRevenue() + value(row.getCropRevenue()));
+        report.setTotalSubsidyRevenue(report.getTotalSubsidyRevenue() + value(row.getSubsidyRevenue()));
     }
 
     private Map<Long, Parcel> collectActivityParcelsById(List<Activity> activities) {
@@ -125,6 +139,31 @@ public class FinancialReportService {
             }
         }
         return parcelsById;
+    }
+
+    private Map<Long, Parcel> collectSubsidyParcelsById(List<ParcelSubsidy> subsidies) {
+        Map<Long, Parcel> parcelsById = new LinkedHashMap<>();
+        for (ParcelSubsidy subsidy : subsidies) {
+            Parcel parcel = subsidy.getParcel();
+            if (parcel != null && parcel.getId() != null) {
+                parcelsById.putIfAbsent(parcel.getId(), parcel);
+            }
+        }
+        return parcelsById;
+    }
+
+    private Map<Long, Double> calculateSubsidiesByParcel(List<ParcelSubsidy> subsidies) {
+        Map<Long, Double> subsidyByParcelId = new HashMap<>();
+
+        for (ParcelSubsidy subsidy : subsidies) {
+            Parcel parcel = subsidy.getParcel();
+            if (parcel == null || parcel.getId() == null) {
+                continue;
+            }
+            subsidyByParcelId.merge(parcel.getId(), value(subsidy.getTotalAmount()), Double::sum);
+        }
+
+        return subsidyByParcelId;
     }
 
     private Map<Long, Double> calculateInputCostsByParcel(List<Activity> activities) {
@@ -184,11 +223,12 @@ public class FinancialReportService {
                 .sum();
     }
 
-    private FinancialReportRowDTO buildRow(CropSeason season, double totalInputCost, double workerLaborCost) {
+    private FinancialReportRowDTO buildRow(CropSeason season, double totalInputCost, double workerLaborCost, double subsidyRevenue) {
         Parcel parcel = season.getParcel();
         double area = parcel != null ? parcel.getAreaHectares() : 0.0;
         double totalYieldKg = value(season.getTotalYieldKg());
-        double totalRevenue = calculateRevenue(season, totalYieldKg);
+        double cropRevenue = calculateRevenue(season, totalYieldKg);
+        double totalRevenue = cropRevenue + subsidyRevenue;
         double totalDirectCost = totalInputCost + workerLaborCost;
         double profit = totalRevenue - totalDirectCost;
 
@@ -203,6 +243,8 @@ public class FinancialReportService {
         row.setYieldPerHectareKg(perHectare(totalYieldKg, area));
         row.setSalePricePerKg(season.getSalePricePerKg());
         row.setRevenueOverride(season.getRevenueOverride());
+        row.setCropRevenue(cropRevenue);
+        row.setSubsidyRevenue(subsidyRevenue);
         row.setTotalRevenue(totalRevenue);
         row.setRevenuePerHectare(perHectare(totalRevenue, area));
         row.setTotalInputCost(totalInputCost);
@@ -214,9 +256,10 @@ public class FinancialReportService {
         return row;
     }
 
-    private FinancialReportRowDTO buildCostOnlyRow(Parcel parcel, int year, double totalInputCost, double workerLaborCost) {
+    private FinancialReportRowDTO buildCostOnlyRow(Parcel parcel, int year, double totalInputCost, double workerLaborCost, double subsidyRevenue) {
         double area = parcel != null ? parcel.getAreaHectares() : 0.0;
         double totalDirectCost = totalInputCost + workerLaborCost;
+        double totalRevenue = subsidyRevenue;
 
         FinancialReportRowDTO row = new FinancialReportRowDTO();
         row.setSeasonId(null);
@@ -229,14 +272,16 @@ public class FinancialReportService {
         row.setYieldPerHectareKg(0.0);
         row.setSalePricePerKg(null);
         row.setRevenueOverride(null);
-        row.setTotalRevenue(0.0);
-        row.setRevenuePerHectare(0.0);
+        row.setCropRevenue(0.0);
+        row.setSubsidyRevenue(subsidyRevenue);
+        row.setTotalRevenue(totalRevenue);
+        row.setRevenuePerHectare(perHectare(totalRevenue, area));
         row.setTotalInputCost(totalInputCost);
         row.setWorkerLaborCost(workerLaborCost);
         row.setTotalDirectCost(totalDirectCost);
         row.setCostPerHectare(perHectare(totalDirectCost, area));
-        row.setProfit(-totalDirectCost);
-        row.setProfitPerHectare(perHectare(-totalDirectCost, area));
+        row.setProfit(totalRevenue - totalDirectCost);
+        row.setProfitPerHectare(perHectare(totalRevenue - totalDirectCost, area));
         return row;
     }
 

@@ -1,30 +1,42 @@
 sequenceDiagram
-    actor Muncitor
+    actor Worker as Muncitor
     participant UI as Frontend React
     participant API as ActivityController
     participant Service as ActivityService
-    participant ActivityRepo as ActivityRepository
-    participant InventoryRepo as InventoryItemRepository
-    participant MachineryRepo as MachineryRepository
+    participant InvRepo as InventoryItemRepository
+    participant MachRepo as MachineryRepository
     participant CropRepo as CropSeasonRepository
     participant Notif as NotificationService
+    participant DB as MySQL
 
-    Muncitor->>UI: finalizează lucrarea și raportează date
+    Worker->>UI: Completeaza raportul de finalizare
     UI->>API: PUT /api/activities/{id}/status
     API->>Service: updateActivityStatus(...)
-    Service->>ActivityRepo: caută activitatea
-    ActivityRepo-->>Service: activitate
-    Service->>Service: verifică muncitor atribuit
-    Service->>Service: setează status COMPLETED
-    Service->>InventoryRepo: scade consumurile reale
-    InventoryRepo-->>Service: stoc actualizat
-    Service->>MachineryRepo: actualizează status și ore utilaje
-    MachineryRepo-->>Service: utilaje actualizate
-    Service->>CropRepo: actualizează producția pentru recoltare
-    CropRepo-->>Service: sezon cultură actualizat
-    Service->>Notif: notifică managerul și agronomul
-    Service->>ActivityRepo: salvează activitatea
-    ActivityRepo-->>Service: activitate finalizată
-    Service-->>API: rezultat
-    API-->>UI: răspuns OK
-    UI-->>Muncitor: confirmare finalizare
+
+    Service->>Service: verifica daca muncitorul este alocat
+    Service->>Service: seteaza status COMPLETED
+    Service->>Service: salveaza interval, comentarii si recolta
+
+    Service->>InvRepo: preia produsele consumate
+    InvRepo->>DB: SELECT inventory_items
+    DB-->>InvRepo: produse
+    InvRepo-->>Service: produse
+    Service->>Service: valideaza consumurile reale
+    Service->>DB: UPDATE stocuri si consumuri
+
+    Service->>MachRepo: actualizeaza orele utilajelor
+    MachRepo->>DB: UPDATE machinery
+
+    alt lucrare de recoltare
+        Service->>CropRepo: actualizeaza sau creeaza sezonul de cultura
+        CropRepo->>DB: SELECT/INSERT/UPDATE crop_seasons
+    end
+
+    Service->>Notif: creeaza notificari pentru manager si agronom
+    Notif->>DB: INSERT notifications
+
+    Service->>DB: UPDATE activity
+    DB-->>Service: activitate actualizata
+    Service-->>API: raspuns succes
+    API-->>UI: activitate finalizata
+    UI-->>Worker: Taskul este marcat ca finalizat

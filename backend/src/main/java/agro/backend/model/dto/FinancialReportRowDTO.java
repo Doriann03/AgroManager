@@ -14,6 +14,8 @@ public class FinancialReportRowDTO {
     private Double yieldPerHectareKg;
     private Double salePricePerKg;
     private Double revenueOverride;
+    private Double cropRevenue;
+    private Double subsidyRevenue;
     private Double totalRevenue;
     private Double revenuePerHectare;
     private Double totalInputCost;

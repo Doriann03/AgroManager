@@ -8,12 +8,14 @@ import agro.backend.model.Farm;
 import agro.backend.model.InventoryItem;
 import agro.backend.model.ItemCategory;
 import agro.backend.model.Parcel;
+import agro.backend.model.ParcelSubsidy;
 import agro.backend.model.User;
 import agro.backend.model.UserRole;
 import agro.backend.model.dto.FinancialReportDTO;
 import agro.backend.repository.ActivityRepository;
 import agro.backend.repository.CropSeasonRepository;
 import agro.backend.repository.MaintenanceLogRepository;
+import agro.backend.repository.ParcelSubsidyRepository;
 import agro.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +45,9 @@ class FinancialReportServiceTests {
     @Mock
     private MaintenanceLogRepository maintenanceLogRepository;
 
+    @Mock
+    private ParcelSubsidyRepository parcelSubsidyRepository;
+
     @InjectMocks
     private FinancialReportService financialReportService;
 
@@ -62,6 +67,7 @@ class FinancialReportServiceTests {
         when(cropSeasonRepository.findAllByFarmAndHarvestYear(farm.getId(), 2026)).thenReturn(List.of(season));
         when(activityRepository.findWithConsumptionsByFarmAndStatusAndYear(farm.getId(), ActivityStatus.COMPLETED, 2026))
                 .thenReturn(List.of(activity));
+        when(parcelSubsidyRepository.findAllByFarmAndYear(farm.getId(), 2026)).thenReturn(List.of());
         when(userRepository.findByFarmIdAndRoleIn(farm.getId(), List.of(UserRole.AGRONOMIST))).thenReturn(List.of(agronomist));
         when(maintenanceLogRepository.sumCostByFarmAndYear(farm.getId(), 2026)).thenReturn(20.0);
 
@@ -72,6 +78,8 @@ class FinancialReportServiceTests {
         assertThat(report.getRows().get(0).getWorkerLaborCost()).isEqualTo(120.0);
         assertThat(report.getRows().get(0).getTotalDirectCost()).isEqualTo(270.0);
         assertThat(report.getRows().get(0).getCostPerHectare()).isEqualTo(135.0);
+        assertThat(report.getRows().get(0).getCropRevenue()).isEqualTo(1500.0);
+        assertThat(report.getRows().get(0).getSubsidyRevenue()).isEqualTo(0.0);
         assertThat(report.getRows().get(0).getTotalRevenue()).isEqualTo(1500.0);
         assertThat(report.getRows().get(0).getProfit()).isEqualTo(1230.0);
         assertThat(report.getRows().get(0).getProfitPerHectare()).isEqualTo(615.0);
@@ -94,6 +102,7 @@ class FinancialReportServiceTests {
         when(cropSeasonRepository.findAllByFarmAndHarvestYear(farm.getId(), 2026)).thenReturn(List.of(season));
         when(activityRepository.findWithConsumptionsByFarmAndStatusAndYear(farm.getId(), ActivityStatus.COMPLETED, 2026))
                 .thenReturn(List.of());
+        when(parcelSubsidyRepository.findAllByFarmAndYear(farm.getId(), 2026)).thenReturn(List.of());
         when(userRepository.findByFarmIdAndRoleIn(farm.getId(), List.of(UserRole.AGRONOMIST))).thenReturn(List.of());
         when(maintenanceLogRepository.sumCostByFarmAndYear(farm.getId(), 2026)).thenReturn(0.0);
 
@@ -116,6 +125,7 @@ class FinancialReportServiceTests {
         when(cropSeasonRepository.findAllByFarmAndHarvestYear(farm.getId(), 2026)).thenReturn(List.of());
         when(activityRepository.findWithConsumptionsByFarmAndStatusAndYear(farm.getId(), ActivityStatus.COMPLETED, 2026))
                 .thenReturn(List.of(activity));
+        when(parcelSubsidyRepository.findAllByFarmAndYear(farm.getId(), 2026)).thenReturn(List.of());
         when(userRepository.findByFarmIdAndRoleIn(farm.getId(), List.of(UserRole.AGRONOMIST))).thenReturn(List.of());
         when(maintenanceLogRepository.sumCostByFarmAndYear(farm.getId(), 2026)).thenReturn(0.0);
 
@@ -128,6 +138,36 @@ class FinancialReportServiceTests {
         assertThat(report.getTotalWorkerLaborCost()).isEqualTo(120.0);
         assertThat(report.getTotalExpenses()).isEqualTo(320.0);
         assertThat(report.getTotalProfit()).isEqualTo(-320.0);
+    }
+
+    @Test
+    void reportAddsParcelSubsidiesToRevenueAndProfit() {
+        Farm farm = farm();
+        User manager = manager(farm);
+        Parcel parcel = parcel(farm, 5.0);
+        CropSeason season = season(parcel, 2026, 2000.0);
+        season.setSalePricePerKg(1.0);
+        ParcelSubsidy subsidy = subsidy(parcel, 2026, 750.0);
+
+        when(userRepository.findByUsername("manager")).thenReturn(Optional.of(manager));
+        when(cropSeasonRepository.findAllByFarmAndHarvestYear(farm.getId(), 2026)).thenReturn(List.of(season));
+        when(activityRepository.findWithConsumptionsByFarmAndStatusAndYear(farm.getId(), ActivityStatus.COMPLETED, 2026))
+                .thenReturn(List.of());
+        when(parcelSubsidyRepository.findAllByFarmAndYear(farm.getId(), 2026)).thenReturn(List.of(subsidy));
+        when(userRepository.findByFarmIdAndRoleIn(farm.getId(), List.of(UserRole.AGRONOMIST))).thenReturn(List.of());
+        when(maintenanceLogRepository.sumCostByFarmAndYear(farm.getId(), 2026)).thenReturn(0.0);
+
+        FinancialReportDTO report = financialReportService.getFinancialReport("manager", 2026);
+
+        assertThat(report.getRows()).hasSize(1);
+        assertThat(report.getRows().get(0).getCropRevenue()).isEqualTo(2000.0);
+        assertThat(report.getRows().get(0).getSubsidyRevenue()).isEqualTo(750.0);
+        assertThat(report.getRows().get(0).getTotalRevenue()).isEqualTo(2750.0);
+        assertThat(report.getRows().get(0).getProfit()).isEqualTo(2750.0);
+        assertThat(report.getTotalCropRevenue()).isEqualTo(2000.0);
+        assertThat(report.getTotalSubsidyRevenue()).isEqualTo(750.0);
+        assertThat(report.getTotalRevenue()).isEqualTo(2750.0);
+        assertThat(report.getTotalProfit()).isEqualTo(2750.0);
     }
 
     private Farm farm() {
@@ -213,5 +253,16 @@ class FinancialReportServiceTests {
         activity.getConsumptions().add(consumption);
 
         return activity;
+    }
+
+    private ParcelSubsidy subsidy(Parcel parcel, int year, double totalAmount) {
+        ParcelSubsidy subsidy = new ParcelSubsidy();
+        subsidy.setId(9L);
+        subsidy.setParcel(parcel);
+        subsidy.setYear(year);
+        subsidy.setSubsidyType("APIA - plata de baza");
+        subsidy.setAmountPerHectare(totalAmount / parcel.getAreaHectares());
+        subsidy.setTotalAmount(totalAmount);
+        return subsidy;
     }
 }

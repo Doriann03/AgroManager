@@ -1,52 +1,60 @@
 flowchart LR
-    Manager["FARM_MANAGER"]
-    Agronom["AGRONOMIST"]
-    Worker["WORKER"]
-    Admin["SUPER_ADMIN"]
+    FM["FARM_MANAGER"]
+    AG["AGRONOMIST"]
+    WK["WORKER"]
+    SA["SUPER_ADMIN"]
 
-    subgraph System["AgroManager"]
-        UCAuth["Autentificare"]
-        UCFarm["Gestionare profil fermă"]
-        UCEmployees["Gestionare angajați"]
-        UCParcels["Gestionare parcele"]
-        UCMap["Consultare hartă"]
-        UCActivities["Planificare activități"]
-        UCWorkerTasks["Executare și raportare taskuri"]
-        UCInventory["Gestionare magazie"]
-        UCRequests["Cereri de aprovizionare"]
-        UCMachinery["Gestionare utilaje"]
-        UCMaint["Gestionare mentenanță"]
-        UCWeather["Consultare vreme"]
-        UCNDVI["Consultare NDVI"]
-        UCReports["Consultare rapoarte"]
-        UCPlatform["Administrare platformă"]
+    subgraph AgroManager["AgroManager"]
+        UC1["Administreaza profilul fermei"]
+        UC2["Gestioneaza angajatii"]
+        UC3["Administreaza magazia"]
+        UC4["Aproba sau respinge cereri"]
+        UC5["Gestioneaza utilaje si mentenanta"]
+        UC6["Analizeaza rapoarte financiare"]
+        UC7["Gestioneaza subventii"]
+        UC21["Consulta payroll-ul fermei"]
+
+        UC8["Consulta parcele pe harta"]
+        UC9["Creeaza activitati agricole"]
+        UC10["Planifica muncitori, utilaje si materiale"]
+        UC11["Consulta istoric culturi, meteo si NDVI"]
+        UC12["Creeaza cereri de aprovizionare"]
+
+        UC13["Vizualizeaza taskurile atribuite"]
+        UC14["Porneste lucrarea"]
+        UC15["Finalizeaza lucrarea"]
+        UC16["Raporteaza consumuri, comentarii si recolta"]
+        UC17["Consulta istoric si payroll propriu"]
+
+        UC18["Administreaza ferme si utilizatori"]
+        UC19["Realizeaza CRUD controlat pe entitati"]
+        UC20["Consulta jurnalul de audit"]
+        UC22["Consulta rapoarte globale de administrare"]
     end
 
-    Manager --> UCAuth
-    Manager --> UCFarm
-    Manager --> UCEmployees
-    Manager --> UCParcels
-    Manager --> UCMap
-    Manager --> UCInventory
-    Manager --> UCRequests
-    Manager --> UCMachinery
-    Manager --> UCMaint
-    Manager --> UCWeather
-    Manager --> UCNDVI
-    Manager --> UCReports
+    FM --> UC1
+    FM --> UC2
+    FM --> UC3
+    FM --> UC4
+    FM --> UC5
+    FM --> UC6
+    FM --> UC7
+    FM --> UC21
+    FM --> UC8
 
-    Agronom --> UCAuth
-    Agronom --> UCParcels
-    Agronom --> UCMap
-    Agronom --> UCActivities
-    Agronom --> UCRequests
-    Agronom --> UCWeather
-    Agronom --> UCNDVI
-    Agronom --> UCReports
+    AG --> UC8
+    AG --> UC9
+    AG --> UC10
+    AG --> UC11
+    AG --> UC12
 
-    Worker --> UCAuth
-    Worker --> UCWorkerTasks
+    WK --> UC13
+    WK --> UC14
+    WK --> UC15
+    WK --> UC16
+    WK --> UC17
 
-    Admin --> UCAuth
-    Admin --> UCPlatform
-    Admin --> UCReports
+    SA --> UC18
+    SA --> UC19
+    SA --> UC20
+    SA --> UC22

@@ -31,6 +31,13 @@ Acest folder conține textele de lucru pentru partea scrisă a lucrării de lice
 - `13_capitolul_4_varianta_scurtata.md` - variantă compactă pentru Capitolul 4, cu mai puține fragmente de cod.
 - `14_capitolul_2_varianta_scurtata.md` - variantă compactă pentru Capitolul 2, fără tabele și cu cerințe grupate.
 - `15_capturi_ecran_varianta_compacta.md` - lista compactă de capturi recomandate pentru Capitolul 7.
+- `16_sincronizare_cod_actual.md` - inventar scurt al funcționalităților confirmate în cod și al celor care trebuie tratate ca dezvoltări viitoare.
+- `17_capitolul_1_varianta_revizuita.md` - variantă revizuită pentru Capitolul 1, cu formulări mai naturale și fără enumerări rigide în 1.2 și 1.4.
+- `18_capitolul_2_varianta_pe_roluri.md` - variantă revizuită pentru Capitolul 2, concentrată pe cerințe pe roluri, conform exemplului profesorului.
+- `19_capitolul_3_completari_baza_date.md` - completări pentru proiectarea bazei de date la nivel conceptual, logic și fizic.
+- `20_capitolul_2_varianta_bullets.md` - variantă completă pentru Capitolul 2, cu cerințele enumerate pe roluri sub formă de bullets.
+- `21_capitolul_3_diagrame_primele.md` - lista diagramelor regenerate pentru prima parte a Capitolului 3 și locul recomandat de inserare în Word.
+- `22_diagrame_compacte_pentru_word.md` - variante compacte pentru diagramele prea mari: componente, cazuri de utilizare, clase și secvență finalizare activitate.
 - `diagrame/` - surse Mermaid pentru diagramele care se exportă ca imagini și se inserează în Word.
 - `08_bibliografie.md` - bibliografia de lucru, completată pe măsură ce apar surse noi.
 - `Dorian.docx` - documentul Word final de lucru, completat manual pe baza drafturilor Markdown.

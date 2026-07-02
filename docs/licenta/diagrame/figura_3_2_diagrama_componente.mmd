@@ -1,35 +1,87 @@
 flowchart TB
-    subgraph Frontend["Frontend React"]
-        Login["Autentificare / Înregistrare"]
-        Dash["Dashboard-uri pe roluri"]
-        Map["Hartă și parcele"]
-        InvUI["Magazie și cereri"]
-        MachUI["Utilaje și mentenanță"]
-        WorkerUI["Taskuri muncitor"]
-        ReportsUI["Rapoarte"]
+    subgraph Client["Frontend React"]
+        AuthUI["Autentificare si inregistrare"]
+        DashUI["Dashboard-uri pe roluri"]
+        MapUI["Harta parcelelor"]
+        InvUI["Magazie"]
+        MachUI["Utilaje si mentenanta"]
+        TaskUI["Taskuri si raportare"]
+        CropUI["Istoric culturi"]
+        WeatherUI["Strategie meteo"]
+        ReportUI["Rapoarte, subventii si payroll"]
+        AdminUI["Administrare platforma"]
     end
 
-    subgraph Backend["Backend Spring Boot"]
-        Auth["AuthController / SecurityConfig"]
-        Farm["FarmController / FarmService"]
-        Parcel["ParcelController / ParcelService"]
-        Activity["ActivityController / ActivityService"]
-        Inventory["InventoryController / InventoryService"]
-        Requests["InventoryRequestController / InventoryRequestService"]
-        Machinery["MachineryController / MachineryService"]
-        Maintenance["MaintenanceController / MaintenanceService"]
-        Notification["NotificationController / NotificationService"]
-        NDVI["NdviController / NdviService"]
-        Weather["WeatherController"]
-        Repos["Repository-uri JPA"]
+    subgraph Server["Backend Spring Boot"]
+        AuthC["AuthController"]
+        FarmC["FarmController"]
+        ParcelC["ParcelController"]
+        ActivityC["ActivityController"]
+        CropC["CropSeasonController"]
+        InventoryC["InventoryController"]
+        RequestC["InventoryRequestController"]
+        MachineryC["MachineryController"]
+        MaintenanceC["MaintenanceController"]
+        NdviC["NdviController"]
+        WeatherC["WeatherController"]
+        NotificationC["NotificationController"]
+        SubsidyC["ParcelSubsidyController"]
+        ReportC["ReportController"]
+        AdminC["AdminController"]
+
+        AuthS["Servicii autentificare"]
+        FarmS["Servicii ferma si angajati"]
+        ParcelS["Servicii parcele"]
+        ActivityS["Servicii activitati"]
+        CropS["Servicii istoric culturi"]
+        InventoryS["Servicii magazie"]
+        RequestS["Servicii cereri aprovizionare"]
+        MachineryS["Servicii utilaje"]
+        MaintenanceS["Servicii mentenanta"]
+        NdviS["Servicii NDVI"]
+        NotifS["Servicii notificari"]
+        SubsidyS["Servicii subventii"]
+        ReportS["Servicii rapoarte financiare si payroll"]
+        AdminS["Servicii administrare"]
     end
 
-    DB[("MySQL")]
-    Sentinel["Sentinel Hub"]
-    Meteo["Open-Meteo"]
+    subgraph Data["Persistenta si servicii externe"]
+        MySQL[("MySQL")]
+        Weather["Open-Meteo"]
+        Sentinel["Sentinel Hub"]
+    end
 
-    Frontend --> Backend
-    Backend --> Repos
-    Repos --> DB
-    NDVI --> Sentinel
-    Weather --> Meteo
+    Client --> Server
+
+    AuthC --> AuthS
+    FarmC --> FarmS
+    ParcelC --> ParcelS
+    ActivityC --> ActivityS
+    CropC --> CropS
+    InventoryC --> InventoryS
+    RequestC --> RequestS
+    MachineryC --> MachineryS
+    MaintenanceC --> MaintenanceS
+    NdviC --> NdviS
+    NotificationC --> NotifS
+    SubsidyC --> SubsidyS
+    ReportC --> ReportS
+    AdminC --> AdminS
+
+    AuthS --> MySQL
+    FarmS --> MySQL
+    ParcelS --> MySQL
+    ActivityS --> MySQL
+    CropS --> MySQL
+    InventoryS --> MySQL
+    RequestS --> MySQL
+    MachineryS --> MySQL
+    MaintenanceS --> MySQL
+    NdviS --> MySQL
+    NotifS --> MySQL
+    SubsidyS --> MySQL
+    ReportS --> MySQL
+    AdminS --> MySQL
+
+    WeatherC --> Weather
+    NdviS --> Sentinel

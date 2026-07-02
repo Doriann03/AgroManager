@@ -1,8 +1,18 @@
 flowchart LR
-    U["Utilizatori<br/>Manager, Agronom, Muncitor, Super Admin"] --> B["Browser web"]
-    B --> FE["Frontend React<br/>Rute protejate, pagini, formulare, hartă"]
-    FE --> API["Backend Spring Boot<br/>API REST, securitate, logică business"]
-    API --> DB[("MySQL<br/>Date aplicație")]
-    API --> OM["Open-Meteo<br/>date meteorologice"]
-    API --> SH["Sentinel Hub<br/>indicatori NDVI"]
-    FE --> MAP["Leaflet / OpenStreetMap<br/>hartă interactivă"]
+    U["Utilizator<br/>browser web"] --> FE["Frontend React<br/>interfata pe roluri"]
+
+    FE --> API["Backend Spring Boot<br/>API REST"]
+
+    API --> SEC["Spring Security<br/>autentificare si autorizare"]
+    API --> BUS["Servicii de business<br/>reguli aplicatie"]
+    BUS --> REP["Repository-uri JPA<br/>acces la date"]
+    REP --> DB[("Baza de date MySQL")]
+
+    BUS --> REPORTE["Rapoarte interne<br/>financiar si payroll"]
+    BUS --> METEO["Serviciu meteo<br/>Open-Meteo"]
+    BUS --> NDVI["Serviciu NDVI<br/>Sentinel Hub"]
+
+    FE -.-> R1["FARM_MANAGER"]
+    FE -.-> R2["AGRONOMIST"]
+    FE -.-> R3["WORKER"]
+    FE -.-> R4["SUPER_ADMIN"]

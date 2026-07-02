@@ -1,0 +1,21 @@
+sequenceDiagram
+    actor Agronom as Agronom
+    participant UI as Frontend React
+    participant API as ActivityController
+    participant Service as ActivityService
+    participant DB as MySQL
+
+    Agronom->>UI: Completeaza formularul lucrarii
+    UI->>API: Trimite cererea de creare
+    API->>Service: createActivity(dto, utilizatorCurent)
+
+    Service->>DB: Verifica parcela, muncitorii, utilajele si materialele
+    DB-->>Service: Returneaza datele necesare
+
+    Service->>Service: Valideaza apartenenta la ferma curenta
+    Service->>DB: Salveaza activitatea si relatiile asociate
+    DB-->>Service: Confirma salvarea
+
+    Service-->>API: Activitate creata
+    API-->>UI: Raspuns de succes
+    UI-->>Agronom: Lucrarea apare in lista activitatilor

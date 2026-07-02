@@ -1,0 +1,23 @@
+flowchart LR
+    FM["FARM_MANAGER"]
+    AG["AGRONOMIST"]
+    WK["WORKER"]
+    SA["SUPER_ADMIN"]
+
+    A["Administrare ferma<br/>profil, angajati, magazie"]
+    B["Planificare agricola<br/>parcele, activitati, utilaje, materiale"]
+    C["Executie lucrari<br/>taskuri, status, raportare"]
+    D["Analiza si rapoarte<br/>productie, costuri, payroll, subventii"]
+    E["Administrare platforma<br/>ferme, utilizatori, CRUD controlat, audit"]
+    F["Suport decizional<br/>harta, vreme, NDVI, istoric culturi"]
+
+    FM --> A
+    FM --> D
+    FM --> F
+
+    AG --> B
+    AG --> F
+
+    WK --> C
+
+    SA --> E

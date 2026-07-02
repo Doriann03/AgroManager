@@ -1,26 +1,27 @@
 flowchart LR
     subgraph Backend["backend/src/main/java/agro/backend"]
-        Config["config<br/>SecurityConfig, DataInitializer"]
-        Controller["controller<br/>API REST"]
-        Service["service<br/>logică business"]
-        Repository["repository<br/>acces date"]
-        Model["model<br/>entități și enum-uri"]
-        DTO["model.dto<br/>obiecte transfer date"]
+        Config["config<br/>securitate, initializare date"]
+        Controller["controller<br/>endpoint-uri REST"]
+        Service["service<br/>logica de business"]
+        Repository["repository<br/>interfete JPA"]
+        Model["model<br/>entitati si enum-uri"]
+        DTO["model.dto<br/>obiecte de transfer"]
     end
 
     subgraph Frontend["frontend/src"]
-        App["App.jsx<br/>rute și layout"]
-        Components["components<br/>pagini React"]
-        Api["api<br/>axiosConfig"]
-        Assets["assets"]
+        App["App.jsx<br/>rute si protectie pe roluri"]
+        Components["components<br/>pagini si formulare"]
+        Api["api/axiosConfig.js<br/>client HTTP"]
+        Style["App.css<br/>stilizare"]
     end
 
     App --> Components
     Components --> Api
     Api --> Controller
+    Controller --> DTO
     Controller --> Service
     Service --> Repository
     Repository --> Model
-    Controller --> DTO
-    Service --> DTO
+    Service --> Model
     Config --> Controller
+    Config --> Service
