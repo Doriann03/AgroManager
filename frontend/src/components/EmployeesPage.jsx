@@ -185,16 +185,18 @@ const EmployeesPage = () => {
     };
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <div>
-                    <h1 style={{ color: 'var(--primary-green)', marginBottom: '6px' }}>Managementul Echipei</h1>
-                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>Date salariale folosite in raportul de profitabilitate.</p>
+        <div className="page-shell">
+            <div className="page-header">
+                <div className="page-header-left">
+                    <BackButton />
+                    <div>
+                        <h1 className="page-title">Managementul echipei</h1>
+                        <p className="page-subtitle">Date salariale folosite in payroll si in raportul de profitabilitate.</p>
+                    </div>
                 </div>
-                <BackButton />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+            <div className="metric-grid" style={{ marginBottom: '20px' }}>
                 <SummaryCard label="Angajati" value={employees.length} />
                 <SummaryCard label="Muncitori cu tarif orar" value={totals.hourlyWorkers} />
                 <SummaryCard label="Salarii lunare agronomi" value={money.format(totals.monthlySalary)} />
@@ -267,7 +269,7 @@ const EmployeesPage = () => {
                 )}
             </div>
 
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+            <div className="card" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h3 style={{ margin: 0 }}>Angajatii Fermei ({employees.length})</h3>
                     {!showForm && (
@@ -315,9 +317,9 @@ const EmployeesPage = () => {
                     <p style={{ color: '#666', fontStyle: 'italic', textAlign: 'center', padding: '20px' }}>Nu exista angajati inregistrati.</p>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px', minWidth: '900px' }}>
+                        <table className="data-table" style={{ marginTop: '10px', minWidth: '900px' }}>
                             <thead>
-                                <tr style={{ backgroundColor: 'var(--primary-green)', color: 'white', textAlign: 'left' }}>
+                                <tr>
                                     <th style={thStyle}>Nume Utilizator</th>
                                     <th style={thStyle}>Email</th>
                                     <th style={thStyle}>Rol</th>

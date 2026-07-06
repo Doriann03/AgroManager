@@ -20,20 +20,21 @@ const BackButton = ({ style }) => {
     };
 
     const defaultStyle = {
-        padding: '8px 15px',
-        display: 'flex',
+        padding: '9px 14px',
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: '5px',
+        gap: '8px',
         borderRadius: '8px',
         cursor: 'pointer',
-        border: '1px solid #ccc',
+        border: '1px solid var(--border-color)',
         backgroundColor: '#fff',
-        color: '#333',
-        fontWeight: 'bold'
+        color: 'var(--text-main)',
+        fontWeight: 800,
+        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)'
     };
 
     return (
-        <button onClick={handleBack} style={{ ...defaultStyle, ...style }}>
+        <button className="back-button" onClick={handleBack} style={{ ...defaultStyle, ...style }}>
             &#8592; Înapoi la Panou
         </button>
     );

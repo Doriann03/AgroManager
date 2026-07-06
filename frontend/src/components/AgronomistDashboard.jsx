@@ -7,86 +7,66 @@ const AgronomistDashboard = () => {
 
     const menuItems = [
         {
-            title: 'Harta Parcelelor',
-            description: 'Planificați lucrările și monitorizați culturile pe hartă.',
-            icon: '🗺️',
+            title: 'Harta si lucrari',
+            description: 'Planificare lucrari agricole, inspectie parcele, sezoane de cultura si NDVI.',
+            icon: 'MAP',
             path: '/map',
             color: '#10b981'
         },
         {
-            title: 'Gestiune Utilaje',
-            description: 'Verificați starea și alocarea echipamentelor.',
-            icon: '🚜',
+            title: 'Utilaje disponibile',
+            description: 'Consultare flota, status, ore de functionare si progres mentenanta.',
+            icon: 'UT',
             path: '/machinery',
             color: '#f59e0b'
         },
         {
-            title: 'Magazie Resurse',
-            description: 'Gestionați stocurile de sămânță, îngrășăminte și motorină.',
-            icon: '📦',
+            title: 'Magazie resurse',
+            description: 'Verificare stocuri si transmitere cereri de aprovizionare catre manager.',
+            icon: 'ST',
             path: '/inventory',
             color: '#6366f1'
         },
         {
-            title: 'Istoric Sarcini Alocate',
-            description: 'Vedeți statusul tuturor lucrărilor atribuite muncitorilor.',
-            icon: '📋',
+            title: 'Istoric lucrari',
+            description: 'Urmarire lucrari programate, in lucru si finalizate pentru muncitori.',
+            icon: 'LOG',
             path: '/agronomist/history',
             color: '#3b82f6'
         },
         {
-            title: 'Meteo și Strategie',
-            description: 'Analiză climatică și ferestre optime de lucru.',
-            icon: '🌤️',
+            title: 'Meteo si strategie',
+            description: 'Analiza vremii, risc de precipitatii si ferestre optime pentru lucrari.',
+            icon: 'MET',
             path: '/weather-strategy',
             color: '#0ea5e9'
         }
     ];
 
     return (
-        <div style={{ padding: '20px' }}>
-            <header style={{ marginBottom: '40px' }}>
-                <h1 style={{ color: 'var(--primary-green)', fontSize: '32px', marginBottom: '8px' }}>
-                    Panou Agronom - {user?.farmName}
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
-                    Bun venit, <strong>{user?.username}</strong>! Gestionați activitățile și resursele fermei.
+        <div className="page-shell">
+            <section className="dashboard-hero">
+                <p className="metric-label" style={{ margin: '0 0 8px 0' }}>Panou agronom</p>
+                <h1 className="page-title">{user?.farmName || 'Ferma'}</h1>
+                <p className="page-subtitle">
+                    Bun venit, <strong>{user?.username}</strong>. De aici coordonezi lucrarile agricole, resursele si observatiile din teren.
                 </p>
-            </header>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px' }}>
-                {menuItems.map((item, index) => (
-                    <div 
-                        key={index} 
-                        className="card card-interactive"
+            </section>
+
+            <div className="dashboard-grid">
+                {menuItems.map((item) => (
+                    <button
+                        key={item.path}
+                        type="button"
+                        className="card module-card"
                         onClick={() => navigate(item.path)}
-                        style={{ 
-                            cursor: 'pointer',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            gap: '15px'
-                        }}
                     >
-                        <div style={{ 
-                            fontSize: '40px', 
-                            width: '80px', 
-                            height: '80px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            backgroundColor: `${item.color}15`,
-                            borderRadius: '50%',
-                            marginBottom: '10px'
-                        }}>
-                            {item.icon}
+                        <span className="module-icon" style={{ backgroundColor: item.color }}>{item.icon}</span>
+                        <div>
+                            <h3 className="module-title">{item.title}</h3>
+                            <p className="module-description">{item.description}</p>
                         </div>
-                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '20px', fontWeight: '700' }}>{item.title}</h3>
-                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
-                            {item.description}
-                        </p>
-                    </div>
+                    </button>
                 ))}
             </div>
         </div>

@@ -361,15 +361,17 @@ const SuperAdminDashboard = () => {
     };
 
     return (
-        <div>
-            <div style={{ marginBottom: '24px' }}>
-                <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>Panou Super Admin</h1>
-                <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)' }}>
+        <div className="page-shell">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-title">Panou Super Admin</h1>
+                    <p className="page-subtitle">
                     Administrare globala platforma, ferme, utilizatori si audit.
-                </p>
+                    </p>
+                </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '24px' }}>
+            <div className="toolbar-tabs">
                 <TabButton active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>Overview</TabButton>
                 <TabButton active={activeTab === 'farms'} onClick={() => setActiveTab('farms')}>Ferme</TabButton>
                 <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')}>Utilizatori</TabButton>
@@ -387,7 +389,7 @@ const SuperAdminDashboard = () => {
                 <>
                     {activeTab === 'overview' && (
                         <div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                            <div className="metric-grid" style={{ marginBottom: '24px' }}>
                                 <SummaryCard label="Ferme totale" value={stats?.totalFarms} />
                                 <SummaryCard label="Utilizatori" value={stats?.totalUsers} />
                                 <SummaryCard label="Manageri" value={stats?.managers} />
@@ -815,10 +817,10 @@ const AdminTable = ({ headers, children, emptyMessage }) => {
     const rows = React.Children.toArray(children).filter(Boolean);
 
     return (
-        <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', minWidth: '850px', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div className="table-wrap">
+            <table className="data-table" style={{ minWidth: '850px' }}>
                 <thead>
-                    <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+                    <tr>
                         {headers.map((header) => (
                             <th key={header} style={thStyle}>{header}</th>
                         ))}
@@ -848,15 +850,7 @@ const FormField = ({ label, children }) => (
 const TabButton = ({ active, children, onClick }) => (
     <button
         onClick={onClick}
-        style={{
-            padding: '10px 14px',
-            borderRadius: '8px',
-            border: active ? '1px solid var(--primary-green)' : '1px solid var(--border-color)',
-            backgroundColor: active ? 'var(--primary-green)' : '#fff',
-            color: active ? '#fff' : 'var(--text-main)',
-            fontWeight: 700,
-            cursor: 'pointer'
-        }}
+        className={`tab-button ${active ? 'is-active' : ''}`}
     >
         {children}
     </button>

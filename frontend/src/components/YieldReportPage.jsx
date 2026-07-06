@@ -273,13 +273,13 @@ const YieldReportPage = () => {
     ];
 
     return (
-        <div style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '30px', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="page-shell">
+            <div className="page-header">
+                <div className="page-header-left">
                     <BackButton />
-                    <div style={{ marginLeft: '20px' }}>
-                        <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>Productie si Profitabilitate</h1>
-                        <p style={{ margin: '6px 0 0 0', color: 'var(--text-muted)', fontSize: '14px' }}>
+                    <div>
+                        <h1 className="page-title">Productie si profitabilitate</h1>
+                        <p className="page-subtitle">
                             Indicatori pe parcela, cultura si an agricol.
                         </p>
                     </div>
@@ -305,7 +305,7 @@ const YieldReportPage = () => {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div className="metric-grid" style={{ marginBottom: '24px' }}>
                 <SummaryCard title="Recolta totala" value={`${formatNumber(report?.totalYieldKg)} kg`} accent="#10b981" />
                 <SummaryCard title="Costuri materiale" value={formatCurrency(report?.totalInputCost)} accent="#f59e0b" />
                 <SummaryCard title="Munca muncitori" value={formatCurrency(report?.totalWorkerLaborCost)} accent="#8b5cf6" />

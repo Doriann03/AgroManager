@@ -211,41 +211,33 @@ const InventoryPage = () => {
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '1100px', margin: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <div>
-                    <h1 style={{ color: 'var(--primary-green)', margin: 0 }}>Gestiune Resurse</h1>
-                    <p style={{ color: 'var(--text-muted)', margin: '5px 0 0 0' }}>Magazie, stocuri si cereri de aprovizionare.</p>
+        <div className="page-shell">
+            <div className="page-header">
+                <div className="page-header-left">
+                    <BackButton />
+                    <div>
+                        <h1 className="page-title">Magazie si stocuri</h1>
+                        <p className="page-subtitle">Consumabile, preturi unitare, valori de stoc si cereri de aprovizionare.</p>
+                    </div>
                 </div>
-                <BackButton />
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+            <div className="metric-grid" style={{ marginBottom: '20px' }}>
+                <SummaryCard label="Produse in magazie" value={inventory.length} />
+                <SummaryCard label="Stocuri reduse" value={inventory.filter(isLowStock).length} />
+                <SummaryCard label="Valoare totala stoc" value={moneyFormatter.format(totalStockValue)} />
+            </div>
+
+            <div className="toolbar-tabs">
                 <button
                     onClick={() => setActiveTab('inventory')}
-                    style={{
-                        padding: '10px 20px',
-                        border: 'none',
-                        background: activeTab === 'inventory' ? 'var(--primary-green)' : 'transparent',
-                        color: activeTab === 'inventory' ? 'white' : 'var(--text-main)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                    }}
+                    className={`tab-button ${activeTab === 'inventory' ? 'is-active' : ''}`}
                 >
                     Stocuri Magazie
                 </button>
                 <button
                     onClick={() => setActiveTab('requests')}
-                    style={{
-                        padding: '10px 20px',
-                        border: 'none',
-                        background: activeTab === 'requests' ? 'var(--primary-green)' : 'transparent',
-                        color: activeTab === 'requests' ? 'white' : 'var(--text-main)',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                    }}
+                    className={`tab-button ${activeTab === 'requests' ? 'is-active' : ''}`}
                 >
                     Cereri Aprovizionare
                 </button>
@@ -310,39 +302,41 @@ const InventoryPage = () => {
                         </form>
                     )}
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div className="table-wrap">
+                    <table className="data-table" style={{ minWidth: '960px' }}>
                         <thead>
-                            <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                                <th style={{ padding: '12px 10px' }}>Produs</th>
-                                <th style={{ padding: '12px 10px' }}>Categorie</th>
-                                <th style={{ padding: '12px 10px' }}>Stoc</th>
-                                <th style={{ padding: '12px 10px' }}>Pret/unitate</th>
-                                <th style={{ padding: '12px 10px' }}>Valoare stoc</th>
-                                <th style={{ padding: '12px 10px' }}>Prag minim</th>
-                                <th style={{ padding: '12px 10px' }}>Status</th>
-                                {isManager && <th style={{ padding: '12px 10px', textAlign: 'right' }}>Actiuni</th>}
+                            <tr>
+                                <th>Produs</th>
+                                <th>Categorie</th>
+                                <th>Stoc</th>
+                                <th>Pret/unitate</th>
+                                <th>Valoare stoc</th>
+                                <th>Prag minim</th>
+                                <th>Status</th>
+                                {isManager && <th style={{ textAlign: 'right' }}>Actiuni</th>}
                             </tr>
                         </thead>
                         <tbody>
                             {inventory.map(item => (
-                                <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                    <td style={{ padding: '15px 10px', fontWeight: '700' }}>{item.name}</td>
-                                    <td style={{ padding: '15px 10px' }}>{categoryLabels[item.category] || item.category}</td>
-                                    <td style={{ padding: '15px 10px' }}>{item.quantityAvailable} {item.unitOfMeasure}</td>
-                                    <td style={{ padding: '15px 10px', fontWeight: '600' }}>{moneyFormatter.format(getUnitPrice(item))}</td>
-                                    <td style={{ padding: '15px 10px', fontWeight: '700' }}>{moneyFormatter.format(getStockValue(item))}</td>
-                                    <td style={{ padding: '15px 10px' }}>{item.minimumStockThreshold ?? 0} {item.unitOfMeasure}</td>
-                                    <td style={{ padding: '15px 10px' }}>{statusBadge(item)}</td>
+                                <tr key={item.id}>
+                                    <td><strong style={{ color: 'var(--text-main)' }}>{item.name}</strong></td>
+                                    <td>{categoryLabels[item.category] || item.category}</td>
+                                    <td>{item.quantityAvailable} {item.unitOfMeasure}</td>
+                                    <td><strong>{moneyFormatter.format(getUnitPrice(item))}</strong></td>
+                                    <td><strong>{moneyFormatter.format(getStockValue(item))}</strong></td>
+                                    <td>{item.minimumStockThreshold ?? 0} {item.unitOfMeasure}</td>
+                                    <td>{statusBadge(item)}</td>
                                     {isManager && (
-                                        <td style={{ padding: '15px 10px', textAlign: 'right' }}>
-                                            <button onClick={() => openEditForm(item)} style={{ marginRight: '10px', background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer' }}>Edit</button>
-                                            <button onClick={() => handleDeleteItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>Sterge</button>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <button className="btn-secondary" onClick={() => openEditForm(item)} style={{ padding: '6px 10px', fontSize: '12px', marginRight: '8px' }}>Edit</button>
+                                            <button className="btn-danger" onClick={() => handleDeleteItem(item.id)} style={{ padding: '6px 10px', fontSize: '12px' }}>Sterge</button>
                                         </td>
                                     )}
                                 </tr>
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 </div>
             ) : (
                 <div className="card">
@@ -430,5 +424,12 @@ const InventoryPage = () => {
         </div>
     );
 };
+
+const SummaryCard = ({ label, value }) => (
+    <div className="metric-card">
+        <div className="metric-label">{label}</div>
+        <div className="metric-value">{value}</div>
+    </div>
+);
 
 export default InventoryPage;

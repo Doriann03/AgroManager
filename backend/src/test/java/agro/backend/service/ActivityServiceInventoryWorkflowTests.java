@@ -125,7 +125,6 @@ class ActivityServiceInventoryWorkflowTests {
         when(parcelRepository.findById(parcel.getId())).thenReturn(Optional.of(parcel));
         when(userRepository.findByFarmIdAndRoleIn(any(), any())).thenReturn(List.of());
         when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
         activityService.updateActivityStatus(
                 activity.getId(),
                 "COMPLETED",
@@ -138,6 +137,7 @@ class ActivityServiceInventoryWorkflowTests {
 
         assertThat(activity.getConsumptions().get(0).getQuantityUsed()).isEqualTo(150.0);
         assertThat(item.getQuantityAvailable()).isEqualTo(450.0);
+
     }
 
     @Test

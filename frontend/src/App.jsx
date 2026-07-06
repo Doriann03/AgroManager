@@ -92,25 +92,13 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ 
-        backgroundColor: 'var(--card-bg)', 
-        borderBottom: '1px solid var(--border-color)', 
-        padding: '0 50px',
-        height: '70px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        boxShadow: 'var(--box-shadow-sm)'
-      }}>
-        <Link to="/" style={{ fontSize: '22px', fontWeight: '800', color: 'var(--primary-green)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <div className="app-shell">
+      <header className="app-header">
+        <Link to="/" className="brand-link">
           <span style={{ fontSize: '28px' }}>🚜</span> AgroManager
         </Link>
         
-        <nav style={{ display: 'flex', gap: '30px', alignItems: 'center', height: '100%' }}>
+        <nav className="app-nav">
           {(user?.role === 'FARM_MANAGER' || user?.role === 'AGRONOMIST') && (
             <>
               <Link to="/map" className="nav-link">Hartă</Link>
@@ -118,11 +106,17 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
               <Link to="/inventory" className="nav-link">Magazie</Link>
               {user?.role === 'FARM_MANAGER' && <Link to="/manager/employees" className="nav-link">Angajați</Link>}
               
+              {user?.role === 'FARM_MANAGER' && <Link to="/manager/profile" className="nav-link">Profil ferma</Link>}
+              {user?.role === 'FARM_MANAGER' && <Link to="/manager/yield-report" className="nav-link">Profitabilitate</Link>}
+              {user?.role === 'AGRONOMIST' && <Link to="/agronomist/history" className="nav-link">Istoric lucrari</Link>}
+              {user?.role === 'AGRONOMIST' && <Link to="/weather-strategy" className="nav-link">Meteo</Link>}
+
               {/* Sectiune Notificari */}
               <div ref={notificationsRef} style={{ position: 'relative', marginLeft: '10px' }}>
                 <button 
                   onClick={() => setShowNotifications(!showNotifications)}
-                  style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', position: 'relative' }}
+                  className="notification-button"
+                  aria-label="Notificari"
                 >
                   🔔
                   {unreadCount > 0 && (
@@ -193,7 +187,7 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
             </>
           )}
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginLeft: '10px', paddingLeft: '20px', borderLeft: '1px solid var(--border-color)', height: '40px' }}>
+          <div className="user-chip">
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>{user?.username}</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{user?.role}</div>
@@ -205,13 +199,13 @@ const AppLayout = ({ children, maxWidth = '1200px' }) => {
         </nav>
       </header>
       
-      <main style={{ flex: 1, padding: '40px 20px' }}>
+      <main className="app-main">
         <div style={{ maxWidth, margin: '0 auto' }}>
           {children}
         </div>
       </main>
 
-      <footer style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', borderTop: '1px solid var(--border-color)', backgroundColor: 'white' }}>
+      <footer className="app-footer">
         &copy; {new Date().getFullYear()} AgroManager - Digitalizăm Agricultura.
       </footer>
     </div>

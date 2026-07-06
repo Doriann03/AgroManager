@@ -7,94 +7,73 @@ const ManagerDashboard = () => {
 
     const menuItems = [
         {
-            title: 'Gestionează Echipa',
-            description: 'Adăugați și vizualizați angajații fermei.',
-            icon: '👥',
+            title: 'Gestionare echipa',
+            description: 'Administrare angajati, roluri, tarife orare, salarii si payroll lunar.',
+            icon: 'HR',
             path: '/manager/employees',
             color: '#3b82f6'
         },
         {
-            title: 'Vizualizare Hartă',
-            description: 'Urmăriți starea parcelelor și a culturilor.',
-            icon: '🗺️',
+            title: 'Harta parcelelor',
+            description: 'Vizualizare parcele, culturi, suprafete si istoric agricol pe harta.',
+            icon: 'MAP',
             path: '/map',
             color: '#10b981'
         },
         {
-            title: 'Utilaje și Echipamente',
-            description: 'Gestionați parcul auto și starea tehnică.',
-            icon: '🚜',
+            title: 'Utilaje si service',
+            description: 'Monitorizare flota, ore de functionare, mentenanta si costuri tehnice.',
+            icon: 'UT',
             path: '/machinery',
             color: '#f59e0b'
         },
         {
-            title: 'Magazie și Stocuri',
-            description: 'Monitorizați semințele, tratamentele și motorina.',
-            icon: '📦',
+            title: 'Magazie si stocuri',
+            description: 'Evidenta consumabile, preturi unitare, praguri minime si cereri de aprovizionare.',
+            icon: 'ST',
             path: '/inventory',
             color: '#6366f1'
         },
         {
-            title: 'Setări și Profil Fermă',
-            description: 'Gestionați viziunea, sediul și jurnalul strategic.',
-            icon: '⚙️',
+            title: 'Profil ferma',
+            description: 'Date generale, contact, viziune, sedinte si jurnal decizional.',
+            icon: 'PF',
             path: '/manager/profile',
             color: '#475569'
         },
         {
-            title: 'Productie si Profitabilitate',
-            description: 'Analizati recolta, costurile, veniturile si profitul pe hectar.',
-            icon: '📈',
+            title: 'Productie si profitabilitate',
+            description: 'Recolta, costuri, salarii, utilaje, subventii APIA si profit pe hectar.',
+            icon: 'PL',
             path: '/manager/yield-report',
-            color: '#10b981'
+            color: '#16a34a'
         }
     ];
 
     return (
-        <div style={{ padding: '20px' }}>
-            <header style={{ marginBottom: '40px' }}>
-                <h1 style={{ color: 'var(--primary-green)', fontSize: '32px', marginBottom: '8px' }}>
-                    Panou de Control - {user?.farmName || 'Management'}
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
-                    Bun venit, <strong>{user?.username}</strong>! De aici puteți superviza toate operațiunile fermei.
+        <div className="page-shell">
+            <section className="dashboard-hero">
+                <p className="metric-label" style={{ margin: '0 0 8px 0' }}>Panou manager</p>
+                <h1 className="page-title">{user?.farmName || 'Ferma'}</h1>
+                <p className="page-subtitle">
+                    Bun venit, <strong>{user?.username}</strong>. Ai acces la modulele de administrare, analiza financiara si monitorizare operationala.
                 </p>
-            </header>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px' }}>
-                {menuItems.map((item, index) => (
-                    <div 
-                        key={index} 
-                        className={`card card-interactive`}
-                        onClick={() => !item.disabled && navigate(item.path)}
-                        style={{ 
-                            cursor: item.disabled ? 'not-allowed' : 'pointer',
-                            opacity: item.disabled ? 0.7 : 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            textAlign: 'center',
-                            gap: '15px'
-                        }}
+            </section>
+
+            <div className="dashboard-grid">
+                {menuItems.map((item) => (
+                    <button
+                        key={item.path}
+                        type="button"
+                        className="card module-card"
+                        onClick={() => navigate(item.path)}
                     >
-                        <div style={{ 
-                            fontSize: '40px', 
-                            width: '80px', 
-                            height: '80px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            backgroundColor: item.disabled ? '#f1f5f9' : `${item.color}15`,
-                            borderRadius: '50%',
-                            marginBottom: '10px'
-                        }}>
-                            {item.icon}
+                        <span className="module-icon" style={{ backgroundColor: item.color }}>{item.icon}</span>
+                        <div>
+                            <h3 className="module-title">{item.title}</h3>
+                            <p className="module-description">{item.description}</p>
                         </div>
-                        <h3 style={{ margin: 0, color: 'var(--text-main)', fontSize: '20px', fontWeight: '700' }}>{item.title}</h3>
-                        <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
-                            {item.disabled ? 'Funcționalitate în curs de dezvoltare.' : item.description}
-                        </p>
-                    </div>
+                    </button>
                 ))}
             </div>
         </div>
