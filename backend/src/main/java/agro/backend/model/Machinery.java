@@ -21,9 +21,9 @@ public class Machinery {
     private Long id;
 
     @Column(nullable = false)
-    private String name; // Ex: "Tractor John Deere 8R 410"
+    private String name;
 
-    private String model; // Ex: "8R 410"
+    private String model;
 
     private String licensePlate;
 
@@ -55,6 +55,6 @@ public class Machinery {
     private Farm farm;
 
     @OneToMany(mappedBy = "machinery", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnoreProperties("machinery") // Previne serializarea recursiva
+    @JsonIgnoreProperties("machinery")
     private List<MaintenanceLog> maintenanceLogs = new ArrayList<>();
 }

@@ -27,9 +27,8 @@ public class Farm {
     @Column(columnDefinition = "TEXT")
     private String visionAndGoals;
 
-    // Cine a creat/este proprietarul principal al fermei (de obicei FARM_MANAGER)
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id", unique = true)
-    @JsonIgnore // Evităm bucle infinite în JSON
+    @JsonIgnore
     private User createdBy;
 }

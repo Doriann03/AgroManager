@@ -31,8 +31,6 @@ public class User implements UserDetails {
 
     private String email;
 
-    // Câmpul farmName a fost eliminat, deoarece detaliile fermei vor veni din entitatea Farm
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserRole role;
@@ -41,13 +39,10 @@ public class User implements UserDetails {
 
     private Double monthlySalary;
 
-    // Legătura către entitatea Farm
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "farm_id") // farm_id poate fi NULL pentru SUPER_ADMIN
-    @JsonIgnore // Evităm bucle infinite în JSON
+    @JoinColumn(name = "farm_id")
+    @JsonIgnore
     private Farm farm;
-
-    // Implementarea metodelor din interfața UserDetails
 
     @Override
     public String getPassword() {

@@ -9,7 +9,7 @@ public class EmployeeRequestDTO {
     private String username;
     private String password;
     private String email;
-    private UserRole role; // Va fi AGRONOMIST sau WORKER
+    private UserRole role;
 
     @PositiveOrZero(message = "Tariful orar nu poate fi negativ.")
     private Double hourlyRate;

@@ -26,7 +26,6 @@ public class Parcel {
     @Column(columnDefinition = "TEXT")
     private String coordinatesJson;
 
-    // O parcelă aparține unei ferme, nu unui utilizator individual
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farm_id", nullable = false)
     @JsonIgnore

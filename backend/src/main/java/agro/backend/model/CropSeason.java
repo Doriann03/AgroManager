@@ -5,20 +5,23 @@ import lombok.*;
 
 @Entity
 @Table(name = "crop_seasons")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class CropSeason {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private Integer harvestYear; // Anul de recoltă (ex: 2024)
+    private Integer harvestYear;
 
     @Column(nullable = false)
-    private String cropType; // Tipul culturii (ex: "Porumb")
+    private String cropType;
 
-    private Double totalYieldKg; // Cantitatea recoltata in kg (ex: 8500)
+    private Double totalYieldKg;
 
     private Double salePricePerKg;
 

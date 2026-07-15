@@ -94,7 +94,7 @@ public class ActivityService {
             agro.backend.model.ActivityStatus status = agro.backend.model.ActivityStatus.valueOf(newStatus.toUpperCase());
             activity.setStatus(status);
             
-            // LOGICA AUTOMATA PENTRU STATUSUL UTILAJELOR
+            // Sincronizeaza starea utilajelor cu starea lucrarii.
             if (status == agro.backend.model.ActivityStatus.IN_PROGRESS) {
                 activity.getMachineries().forEach(m -> {
                     m.setStatus(agro.backend.model.MachineryStatus.IN_CURSA);
@@ -117,7 +117,7 @@ public class ActivityService {
                 deductInventoryForCompletedActivity(activity);
             }
 
-            // LOGICA AUTOMATA PENTRU ORELE DE FUNCTIONARE
+            // Adauga orele lucrate la utilajele folosite.
             if (status == agro.backend.model.ActivityStatus.COMPLETED && activity.getStartDate() != null && activity.getEndDate() != null) {
                 long durationHours = java.time.Duration.between(activity.getStartDate(), activity.getEndDate()).toHours();
                 if (durationHours > 0) {
@@ -129,7 +129,7 @@ public class ActivityService {
                 }
             }
 
-            // LOGICA SINCRONIZARE RECOLTA (RECOLTAT -> CropSeason)
+            // Sincronizeaza recolta raportata cu sezonul de cultura.
             if (activity.getType() == ActivityType.RECOLTAT && status == agro.backend.model.ActivityStatus.COMPLETED && harvestedYieldKg != null && harvestedYieldKg > 0) {
                 
                 int syncYear = java.time.LocalDateTime.now().getYear();
@@ -155,7 +155,7 @@ public class ActivityService {
                     });
             }
 
-            // TRIGGER NOTIFICARI pentru Agronomi si Manageri
+            // Notifica managerii si agronomii dupa finalizarea lucrarii.
             if (status == agro.backend.model.ActivityStatus.COMPLETED) {
                 Parcel parcel = parcelRepository.findById(activity.getParcel().getId()).orElse(null);
                 if (parcel != null && parcel.getFarm() != null) {

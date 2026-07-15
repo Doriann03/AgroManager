@@ -15,17 +15,21 @@ public class ActivityRequestDTO {
 
     @NotBlank(message = "Titlul lucrarii este obligatoriu.")
     private String title;
+
     private ActivityType type;
+
     private Double harvestedYieldKg;
+
     private LocalDateTime startDate;
 
     @NotNull(message = "Parcela este obligatorie.")
     private Long parcelId;
+
     private List<Long> machineryIds;
 
     @NotEmpty(message = "Trebuie selectat cel putin un muncitor.")
-    private List<Long> assignedWorkerIds; 
+    private List<Long> assignedWorkerIds;
 
     @Valid
-    private List<ConsumptionRequestDTO> consumptions; // Lista cu stocurile consumate
+    private List<ConsumptionRequestDTO> consumptions;
 }

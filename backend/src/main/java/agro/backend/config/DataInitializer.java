@@ -6,6 +6,9 @@ import agro.backend.model.UserRole;
 import agro.backend.repository.FarmRepository;
 import agro.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,82 +18,87 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class DataInitializer {
 
+    private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
+
     private final UserRepository userRepository;
     private final FarmRepository farmRepository;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${app.demo-data.enabled:false}")
+    private boolean demoDataEnabled;
 
     @Bean
     public CommandLineRunner initData() {
         return args -> {
             normalizeExistingUsernames();
 
-            // SUPER_ADMIN (fără fermă)
-            if (userRepository.findByUsername("admin").isEmpty()) {
-                User admin = new User();
-                admin.setUsername("admin");
-                admin.setPassword(passwordEncoder.encode("password"));
-                admin.setEmail("admin@agromanager.com");
-                admin.setRole(UserRole.SUPER_ADMIN);
-                userRepository.save(admin);
-                System.out.println(">>> Utilizator SUPER_ADMIN creat: user=admin, pass=password");
-            }
-            
-            // Creăm o fermă de test dacă nu există utilizatorul manager
-            if (userRepository.findByUsername("manager").isEmpty()) {
-                User manager = new User();
-                manager.setUsername("manager");
-                manager.setPassword(passwordEncoder.encode("password"));
-                manager.setEmail("manager@agromanager.com");
-                manager.setRole(UserRole.FARM_MANAGER);
-                
-                // Salvăm mai întâi managerul pentru a putea fi setat ca owner al fermei
-                manager = userRepository.save(manager);
-                
-                Farm farm = new Farm();
-                farm.setName("Ferma de Test");
-                farm.setAddress("Str. Câmpului, Nr. 1");
-                farm.setContactEmail("contact@fermatest.ro");
-                farm.setCreatedBy(manager); // Aici avem nevoie de un user valid
-                
-                farm = farmRepository.save(farm);
-                
-                // Acum asociem managerul la fermă și salvăm din nou
-                manager.setFarm(farm);
-                userRepository.save(manager);
-                System.out.println(">>> Utilizator FARM_MANAGER și Ferma de Test creat: user=manager, pass=password");
+            if (!demoDataEnabled) {
+                return;
             }
 
-            // Preluăm ferma de test pentru a o asocia celorlalți
-            Farm testFarm = farmRepository.findByName("Ferma de Test").orElse(null);
-
-            if (testFarm != null) {
-                // AGRONOMIST (asociat cu ferma de test)
-                if (userRepository.findByUsername("agronom").isEmpty()) {
-                    User agronomist = new User();
-                    agronomist.setUsername("agronom");
-                    agronomist.setPassword(passwordEncoder.encode("password"));
-                    agronomist.setEmail("agronom@agromanager.com");
-                    agronomist.setRole(UserRole.AGRONOMIST);
-                    agronomist.setMonthlySalary(10000.0);
-                    agronomist.setFarm(testFarm);
-                    userRepository.save(agronomist);
-                    System.out.println(">>> Utilizator AGRONOMIST creat: user=agronom, pass=password");
-                }
-
-                // WORKER (asociat cu ferma de test)
-                if (userRepository.findByUsername("muncitor").isEmpty()) {
-                    User worker = new User();
-                    worker.setUsername("muncitor");
-                    worker.setPassword(passwordEncoder.encode("password"));
-                    worker.setEmail("muncitor@agromanager.com");
-                    worker.setRole(UserRole.WORKER);
-                    worker.setHourlyRate(30.0);
-                    worker.setFarm(testFarm);
-                    userRepository.save(worker);
-                    System.out.println(">>> Utilizator WORKER creat: user=muncitor, pass=password");
-                }
-            }
+            seedDemoUsersAndFarm();
         };
+    }
+
+    private void seedDemoUsersAndFarm() {
+        if (userRepository.findByUsername("admin").isEmpty()) {
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setPassword(passwordEncoder.encode("password"));
+            admin.setEmail("admin@agromanager.com");
+            admin.setRole(UserRole.SUPER_ADMIN);
+            userRepository.save(admin);
+            logger.info("Demo SUPER_ADMIN created: user=admin");
+        }
+
+        if (userRepository.findByUsername("manager").isEmpty()) {
+            User manager = new User();
+            manager.setUsername("manager");
+            manager.setPassword(passwordEncoder.encode("password"));
+            manager.setEmail("manager@agromanager.com");
+            manager.setRole(UserRole.FARM_MANAGER);
+            manager = userRepository.save(manager);
+
+            Farm farm = new Farm();
+            farm.setName("Ferma de Test");
+            farm.setAddress("Str. Campului, Nr. 1");
+            farm.setContactEmail("contact@fermatest.ro");
+            farm.setCreatedBy(manager);
+            farm = farmRepository.save(farm);
+
+            manager.setFarm(farm);
+            userRepository.save(manager);
+            logger.info("Demo FARM_MANAGER and farm created: user=manager");
+        }
+
+        Farm testFarm = farmRepository.findByName("Ferma de Test").orElse(null);
+        if (testFarm == null) {
+            return;
+        }
+
+        if (userRepository.findByUsername("agronom").isEmpty()) {
+            User agronomist = new User();
+            agronomist.setUsername("agronom");
+            agronomist.setPassword(passwordEncoder.encode("password"));
+            agronomist.setEmail("agronom@agromanager.com");
+            agronomist.setRole(UserRole.AGRONOMIST);
+            agronomist.setMonthlySalary(10000.0);
+            agronomist.setFarm(testFarm);
+            userRepository.save(agronomist);
+            logger.info("Demo AGRONOMIST created: user=agronom");
+        }
+
+        if (userRepository.findByUsername("muncitor").isEmpty()) {
+            User worker = new User();
+            worker.setUsername("muncitor");
+            worker.setPassword(passwordEncoder.encode("password"));
+            worker.setEmail("muncitor@agromanager.com");
+            worker.setRole(UserRole.WORKER);
+            worker.setHourlyRate(30.0);
+            worker.setFarm(testFarm);
+            userRepository.save(worker);
+            logger.info("Demo WORKER created: user=muncitor");
+        }
     }
 
     private void normalizeExistingUsernames() {
@@ -106,14 +114,13 @@ public class DataInitializer {
             }
 
             if (userRepository.existsByUsername(normalizedUsername)) {
-                System.out.println(">>> Username cu spatii pastrat din cauza unei coliziuni: '" + username + "'");
+                logger.warn("Username normalization skipped because of collision: '{}'", username);
                 return;
             }
 
             user.setUsername(normalizedUsername);
             userRepository.save(user);
-            System.out.println(">>> Username normalizat: '" + username + "' -> '" + normalizedUsername + "'");
+            logger.info("Username normalized: '{}' -> '{}'", username, normalizedUsername);
         });
-
     }
 }

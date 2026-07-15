@@ -112,7 +112,7 @@ const Login = () => {
                             className="btn-secondary"
                             style={{ width: '100%', marginTop: '10px', backgroundColor: '#fff' }}
                         >
-                            Inapoi la pagina principala
+                            Înapoi la pagina principală
                         </button>
                     </div>
                 </form>

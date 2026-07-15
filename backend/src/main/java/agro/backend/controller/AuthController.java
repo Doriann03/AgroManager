@@ -8,9 +8,9 @@ import agro.backend.model.dto.LoginResponse;
 import agro.backend.model.dto.RegisterRequest;
 import agro.backend.repository.FarmRepository;
 import agro.backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -46,8 +46,8 @@ public class AuthController {
 
         HttpSession session = request.getSession(true);
         session.setAttribute(
-            HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-            SecurityContextHolder.getContext()
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
+                SecurityContextHolder.getContext()
         );
 
         User user = (User) authentication.getPrincipal();
@@ -68,7 +68,6 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Eroare: Numele de utilizator este deja folosit!");
         }
 
-        // 1. Creăm și salvăm utilizatorul (managerul) FĂRĂ fermă
         User manager = new User();
         manager.setUsername(username);
         manager.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
@@ -76,7 +75,6 @@ public class AuthController {
         manager.setRole(UserRole.FARM_MANAGER);
         User savedManager = userRepository.save(manager);
 
-        // 2. Creăm ferma și o legăm de managerul deja salvat
         Farm farm = new Farm();
         farm.setName(registerRequest.getFarmName());
         farm.setAddress(registerRequest.getFarmAddress());
@@ -84,10 +82,9 @@ public class AuthController {
         farm.setCreatedBy(savedManager);
         Farm savedFarm = farmRepository.save(farm);
 
-        // 3. Actualizăm managerul cu ferma creată și salvăm din nou
         savedManager.setFarm(savedFarm);
         userRepository.save(savedManager);
 
-        return ResponseEntity.ok("Utilizator și fermă înregistrate cu succes!");
+        return ResponseEntity.ok("Utilizator si ferma inregistrate cu succes!");
     }
 }

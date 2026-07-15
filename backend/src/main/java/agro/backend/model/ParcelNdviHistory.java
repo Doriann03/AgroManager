@@ -7,8 +7,8 @@ import lombok.Setter;
 
 @Entity
 @Table(
-    name = "parcel_ndvi_history",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"parcel_id", "period_key"})
+        name = "parcel_ndvi_history",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"parcel_id", "period_key"})
 )
 @Getter
 @Setter
@@ -23,7 +23,7 @@ public class ParcelNdviHistory {
     private Long parcelId;
 
     @Column(name = "period_key", nullable = false)
-    private String periodKey; // Format "YYYY-MM"
+    private String periodKey;
 
     @Column(name = "ndvi_value", nullable = false)
     private Double ndviValue;

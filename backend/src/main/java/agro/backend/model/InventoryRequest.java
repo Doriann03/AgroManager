@@ -22,6 +22,7 @@ public class InventoryRequest {
     private String itemName;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "ENUM('SEED','FERTILIZER','HERBICIDE','FUNGICIDE','INSECTICIDE','PESTICIDE','FUEL','SPARE_PARTS','OTHER')")
     private ItemCategory itemCategory = ItemCategory.OTHER;
 
     private Double quantityRequested;

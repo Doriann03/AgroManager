@@ -6,7 +6,10 @@ import lombok.*;
 
 @Entity
 @Table(name = "activity_consumptions")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class ActivityConsumption {
 
     @Id
@@ -18,7 +21,7 @@ public class ActivityConsumption {
     @JsonIgnore
     private Activity activity;
 
-    @ManyToOne(fetch = FetchType.EAGER) // Eager pentru a aduce detaliile produsului odata cu consumul
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "inventory_item_id", nullable = false)
     private InventoryItem inventoryItem;
 

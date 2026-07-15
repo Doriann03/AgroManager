@@ -12,8 +12,12 @@ import java.util.Set;
 
 @Entity
 @Table(name = "activities")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class Activity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -43,22 +47,21 @@ public class Activity {
 
     @ManyToMany
     @JoinTable(
-        name = "activity_workers",
-        joinColumns = @JoinColumn(name = "activity_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
+            name = "activity_workers",
+            joinColumns = @JoinColumn(name = "activity_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
     )
     private Set<User> assignedWorkers = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
-        name = "activity_machinery", 
-        joinColumns = @JoinColumn(name = "activity_id"), 
-        inverseJoinColumns = @JoinColumn(name = "machinery_id") 
+            name = "activity_machinery",
+            joinColumns = @JoinColumn(name = "activity_id"),
+            inverseJoinColumns = @JoinColumn(name = "machinery_id")
     )
     private Set<Machinery> machineries = new HashSet<>();
 
-    // Legătura cu consumurile
     @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnoreProperties("activity") // Pentru a preveni bucle infinite in JSON
+    @JsonIgnoreProperties("activity")
     private List<ActivityConsumption> consumptions = new ArrayList<>();
 }

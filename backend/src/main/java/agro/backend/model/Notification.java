@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,7 +23,7 @@ public class Notification {
     @Column(nullable = false)
     private String message;
 
-    private String type; // ex: TASK_COMPLETED, NEW_ASSIGNMENT
+    private String type;
 
     @Column(name = "is_read")
     @JsonProperty("isRead")

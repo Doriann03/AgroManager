@@ -6,9 +6,12 @@ import lombok.*;
 
 @Entity
 @Table(name = "inventory_items")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class InventoryItem {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -17,7 +20,7 @@ public class InventoryItem {
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "ENUM('SEED','FERTILIZER','HERBICIDE','FUNGICIDE','INSECTICIDE','PESTICIDE','FUEL','SPARE_PARTS','OTHER')")
     private ItemCategory category;
 
     @Column(nullable = false)
@@ -31,7 +34,6 @@ public class InventoryItem {
 
     private Double unitPrice;
 
-    // Un produs din magazie aparține unei ferme, nu unui utilizator individual
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "farm_id", nullable = false)
     @JsonIgnore
